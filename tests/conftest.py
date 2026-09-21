@@ -56,7 +56,6 @@ async def client(database_url, monkeypatch):
         public_url="http://test",
         provider_key="local-test-provider",
         webhook_secret="local-test-webhook",
-        broker_url="amqp://guest:guest@localhost//",
     )
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"

@@ -1,9 +1,10 @@
-import os
 from uuid import uuid4
 
 from starlette.datastructures import URL, Headers, MutableHeaders
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
+
+from app.settings import runtime_value
 
 
 class RequestPolicy:
@@ -19,7 +20,9 @@ class RequestPolicy:
         scope.setdefault("state", {})["request_id"] = request_id
         origin = Headers(scope=scope).get("origin")
         url = URL(scope=scope)
-        allowed = os.getenv("WELLNEST_ORIGIN", f"{url.scheme}://{url.netloc}")
+        allowed = runtime_value(
+            scope.get("env"), "WELLNEST_ORIGIN", f"{url.scheme}://{url.netloc}"
+        )
 
         async def send_with_headers(message: Message):
             if message["type"] == "http.response.start":

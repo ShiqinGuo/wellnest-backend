@@ -4,8 +4,8 @@ import argparse
 import asyncio
 from uuid import UUID
 
-from app.payment_tasks import scoped_database
 from app.repositories.outbox import OutboxRepository
+from app.runtime_database import scoped_database
 
 
 async def main():

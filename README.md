@@ -1,19 +1,36 @@
 # Wellnest Backend
 
-独立的 Python 后端仓库：FastAPI、Pydantic、SQLAlchemy 声明模型、PostgreSQL、RabbitMQ、Celery。前端在 `wellnest-frontend`。本仓库不需要 Node.js，也不从前端目录导入文件。
+独立的 Python 后端仓库：FastAPI、Pydantic、SQLAlchemy 声明模型、PostgreSQL、Cloudflare Python Workers 和 Queues。前端在 `wellnest-frontend`。业务和测试使用 Python；Wrangler 本地运行与部署需要 Node.js。
 
 ## 启动
 
 ```bash
-uv sync --locked
+uv sync --locked --group deploy
+npm ci
 uv run python scripts/setup_payment_demo.py
-docker compose --env-file .env.payments -f compose.payments.yml up -d --build
+docker compose --env-file .env.payments -f compose.payments.yml up -d --wait
+uv run --group deploy python scripts/dev_workers.py
+# 另一个终端
 uv run python scripts/payment_smoke.py
 ```
 
 API / OpenAPI：`http://127.0.0.1:18090/docs`。Compose 是独立的本地演示环境，数据库名 `wellnest_test`，持久化卷不会影响旧项目。凭据随机生成到被 Git 忽略的 `.env.payments`，不要提交它。前端开发默认 `http://127.0.0.1:5174`。
 
-`api`、`worker`、`scheduler` 使用同一镜像；`migrate` 先运行 Alembic，再启动业务进程。生产需单独配置 PostgreSQL、RabbitMQ、HTTPS、可信前端 Origin、Provider 地址和共享密钥。真实支付渠道尚未接入。此次不自动替换旧 Cloudflare 线上部署。
+Compose 只运行本地 PostgreSQL；启动脚本迁移数据库、生成被忽略的 `.dev.vars`，然后启动 workerd 和 Miniflare 的真实队列处理入口。不再运行 RabbitMQ、Celery 或独立调度进程。需要 uv >= 0.12.3。真实支付渠道尚未接入。
+
+## Cloudflare 部署
+
+后端 Worker 为 `wellnest-backend`。前端仓库独立部署 `wellnest-assessment`，通过服务绑定反代 API，保留原站点 URL 和 Cookie。先部署并验证后端，再切换前端。
+
+1. 配置 `wrangler.jsonc` 中 account、Hyperdrive、公开 URL 和可信 Origin。现有 Neon 上先执行追加迁移 `alembic upgrade head`；通过安全的本地环境提供数据库 URL。
+2. 创建队列：`npx wrangler queues create wellnest-payments` 和 `npx wrangler queues create wellnest-payments-dead`。
+3. 使用 `uv run --group deploy pywrangler secret put` 设置 `WELLNEST_PAYMENT_PROVIDER_KEY` 和 `WELLNEST_PAYMENT_WEBHOOK_SECRET`；启用 AI 时另设 `TYPESAFE_API_KEY`。不要将密钥提交 Git。
+4. `npm run deploy:check` 检查打包，`npm run deploy` 发布。生产首次发布前需注入上述密钥；后续部署保留现有 secrets。
+5. 用 `uv run python scripts/payment_smoke.py --base-url PUBLIC_ORIGIN` 验证部署后的真实闭环。
+
+正常请求提交事务后由 `waitUntil` 尝试投递，队列处理完成后继续投递衍生事件。每 10 分钟 Cron 兜底扫描过期租约和 pending 支付，避免闲置时每秒查询 Neon。正常付款无需等 Cron；用户 refresh 也会触发立即查单投递。极端情况下投递中断后的自动恢复会有最多一个扫描周期的延迟。
+
+Mock 渠道依然走独立 HTTP 协议和签名校验，Worker 内通过 `PAYMENT_API` 服务绑定调用同一部署的渠道路由，不穿过公网，不直接修改商户会员记录。
 
 ## 分层和事实归属
 
@@ -71,7 +88,7 @@ sequenceDiagram
   participant UI as Frontend
   participant API as Merchant API
   participant PG as PostgreSQL
-  participant W as Relay / RabbitMQ / Celery
+  participant W as Outbox relay / Cloudflare Queues
   participant P as Mock Provider
   UI->>API: POST /api/payments
   API->>PG: transaction: Payment(pending) + Outbox
@@ -93,15 +110,16 @@ sequenceDiagram
 - Outbox：pending / published / failed，独立的 processed_at 表示业务处理完成。发布确认不等于处理完成。
 - Inbox：pending → processed / rejected，独立处理结果。通知先可靠落库，外部 HTTP 在事务外执行。
 - 终态冲突通知先查渠道；仍冲突则保留原终态并记录 rejected，不能自动推翻已经开通的权益。
-- Relay 用 `FOR UPDATE SKIP LOCKED` 和租约领取；RabbitMQ durable 队列、持久化任务及 publisher confirm；投递至少一次。崩溃或消息丢失时，未处理事件租约到期重新投递。
-- Celery 关闭此单 worker 方案不需要的 remote control、gossip/mingle，避免 RabbitMQ 4.3 禁止的临时非独占队列（参见 https://www.rabbitmq.com/docs/queues）。任务仍使用持久化队列。
-- Celery 使用 late ACK、worker-lost redelivery、网络超时和任务时间限制。以数据库 processed_at 和业务锁处理重复，不依赖 Celery result backend。
+- Relay 用 `FOR UPDATE SKIP LOCKED` 和租约领取；发布 Queues 成功后记录 published。消息只含版本、event_id、lease_token，业务指令仍从数据库读取。旧租约消息不能执行重新投递或人工重放后的事件。
+- 队列入口在业务提交后 ACK。执行失败持久化错误和有限重试预算、延长租约，再由 Queues 延迟重试；数据库不可用时不 ACK。重复或已完成消息幂等 ACK。发布确认不能覆盖 failed 或完成回执。
+- 业务重试预算耗尽后在 Outbox 留下 failed 记录。损坏消息或基础设施故障导致队列重试耗尽时进入 dead-letter queue；数据库未完成任务仍可由 Cron 恢复。全局执行超时短于租约，防止无限运行。
 - 发布/处理重试预算耗尽后标为 failed，保留证据和重放入口。pending 支付按数据库 next_check_at 持续查单；查无此单时用同一商户引用幂等重建渠道交易。
 - 金额不使用浮点；会员不由前端或 Mock 收银台直接设置。
 
 ```bash
-docker compose --env-file .env.payments -f compose.payments.yml exec worker python scripts/payment_outbox.py
-docker compose --env-file .env.payments -f compose.payments.yml exec worker python scripts/payment_outbox.py --requeue EVENT_UUID
+# 在受控运维环境配置 WELLNEST_DATABASE_URL 和 PYTHONPATH=src 后运行
+uv run python scripts/payment_outbox.py
+uv run python scripts/payment_outbox.py --requeue EVENT_UUID
 ```
 
 ## 数据库关系
@@ -126,7 +144,9 @@ uv run pytest
 uv run python scripts/generate_frontend_contract.py --check
 ```
 
-默认 pytest 使用独立 PostgreSQL Testcontainers；也可设置 WELLNEST_TEST_DATABASE_URL，数据库名必须为 wellnest_test。覆盖原测评逻辑、权限、并发、模型与迁移一致性，以及支付重复/丢失通知、HMAC、金额校验、越权、创建超时、查单竞争、事务回滚、租约恢复和有限重试。集成测试直调任务处理器并走真实 HTTP 协议；`payment_smoke.py` 另行验证真实队列和常驻进程，不能混称为同一种验证。
+默认 pytest 使用独立 PostgreSQL Testcontainers；也可设置 WELLNEST_TEST_DATABASE_URL，数据库名必须为 wellnest_test。覆盖原测评逻辑、权限、并发、模型与迁移一致性，以及支付重复/丢失通知、HMAC、金额校验、越权、创建超时、查单竞争、事务回滚、租约恢复和有限重试。队列测试另覆盖发布响应丢失、旧租约消息、提交后重复投递、重试耗尽、数据库不可用及损坏消息隔离。
+
+CI 运行 pytest、契约检查、Worker 打包，再启动真实 workerd / Miniflare 队列模拟器执行黑盒支付。该验证覆盖 Worker SDK 和 HTTP 服务绑定，但不等同于生产 Cloudflare 队列验证；线上需另外运行 smoke。第一次适配中发现的 SDK queue 参数差异通过本地运行时验证修正。
 
 未实现真实渠道验签规范、退款/续费、跨区域容灾和压测，因为本次交付是单渠道演示闭环。
 

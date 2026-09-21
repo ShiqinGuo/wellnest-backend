@@ -1,4 +1,6 @@
 .venv/
+.venv-workers/
+python_modules/
 node_modules/
 dist/
 __pycache__/
@@ -7,6 +9,8 @@ __pycache__/
 !.env.example
 .pytest_cache/
 .ruff_cache/
+.wrangler/
+.dev.vars*
 work/
 outputs/
 test-results/

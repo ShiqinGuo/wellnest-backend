@@ -36,10 +36,12 @@ class OutboxRepository:
     async def published(self, row) -> None:
         status = OutboxStateMachine.transition(OutboxStatus(row["status"]), OutboxEvent.publish)
         await self.conn.execute(
-            "UPDATE outbox_events SET status=$3 WHERE id=$1 AND lease_token=$2",
+            "UPDATE outbox_events SET status=$3 WHERE id=$1 AND lease_token=$2 "
+            "AND processed_at IS NULL AND status<>$4",
             row["id"],
             row["lease_token"],
             status,
+            OutboxStatus.failed,
         )
 
     async def failed(self, row, error: str, settings: PaymentSettings) -> None:
@@ -63,6 +65,32 @@ class OutboxRepository:
 
     async def get(self, event_id: UUID):
         return await self.conn.fetchrow("SELECT * FROM outbox_events WHERE id=$1", event_id)
+
+    async def renew(self, row, lease_seconds: int) -> bool:
+        return (
+            await self.conn.fetchval(
+                """UPDATE outbox_events SET lease_until=now()+$3*interval '1 second'
+            WHERE id=$1 AND lease_token=$2 AND processed_at IS NULL AND status<>$4
+            RETURNING id""",
+                row["id"],
+                row["lease_token"],
+                lease_seconds,
+                OutboxStatus.failed,
+            )
+            is not None
+        )
+
+    async def retry_execution(self, row, error: str, delay: int, settings: PaymentSettings):
+        await self.conn.execute(
+            """UPDATE outbox_events SET attempts=attempts+1,last_error=$3,
+            lease_until=now()+$4*interval '1 second'
+            WHERE id=$1 AND lease_token=$2 AND processed_at IS NULL AND status<>$5""",
+            row["id"],
+            row["lease_token"],
+            error[:128],
+            delay + settings.lease_seconds,
+            OutboxStatus.failed,
+        )
 
     async def done(self, event_id: UUID) -> None:
         await self.conn.execute(

@@ -1,8 +1,8 @@
 """Explicit settings shared by API, worker and outbox scheduler."""
 
 import os
-from functools import lru_cache
 
+from fastapi import Request
 from pydantic import BaseModel, Field, SecretStr, model_validator
 
 from app.domain.payment_states import Currency
@@ -14,7 +14,6 @@ class PaymentSettings(BaseModel):
     merchant_url: str = "http://api:8000"
     provider_key: SecretStr
     webhook_secret: SecretStr
-    broker_url: SecretStr
     amount_minor: int = Field(default=990, gt=0)
     currency: Currency = Currency.cny
     network_timeout: float = Field(default=5, gt=0)
@@ -29,21 +28,25 @@ class PaymentSettings(BaseModel):
     max_attempts: int = Field(default=8, gt=0, le=20)
     retry_base: int = Field(default=2, gt=0, le=10)
     retry_cap: int = Field(default=300, gt=0)
-    worker_soft_limit: int = Field(default=45, gt=0)
-    worker_hard_limit: int = Field(default=50, gt=0)
+    execution_timeout: int = Field(default=25, gt=0)
+    relay_timeout: int = Field(default=20, gt=0)
 
     @model_validator(mode="after")
     def validate_deadlines(self):
-        if not self.worker_soft_limit < self.worker_hard_limit < self.lease_seconds:
-            raise ValueError("Require soft limit < hard limit < lease")
+        if not self.execution_timeout < self.lease_seconds:
+            raise ValueError("Require execution timeout < lease")
         return self
 
 
-@lru_cache
-def payment_settings() -> PaymentSettings:
+def load_payment_settings(env=None) -> PaymentSettings:
     values = {}
     for name in PaymentSettings.model_fields:
-        value = os.getenv(f"WELLNEST_PAYMENT_{name.upper()}")
+        key = f"WELLNEST_PAYMENT_{name.upper()}"
+        value = getattr(env, key, None) if env is not None else os.getenv(key)
         if value is not None:
             values[name] = value
     return PaymentSettings.model_validate(values)
+
+
+async def payment_settings(request: Request) -> PaymentSettings:
+    return load_payment_settings(request.scope.get("env"))

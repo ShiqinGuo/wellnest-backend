@@ -1,4 +1,9 @@
+import os
 from dataclasses import dataclass
+
+
+def runtime_value(env, key: str, default: str | None = None) -> str | None:
+    return getattr(env, key, default) if env is not None else os.getenv(key, default)
 
 
 @dataclass(frozen=True)

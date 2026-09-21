@@ -1,4 +1,4 @@
-"""Black-box payment test against API + actual scheduler, broker and Celery worker."""
+"""Black-box payment test against HTTP + actual Cloudflare Queue handlers."""
 
 import argparse
 import json
@@ -89,7 +89,7 @@ def main():
                 {
                     "paymentId": created["id"],
                     "status": "passed",
-                    "transport": "HTTP + PostgreSQL outbox + RabbitMQ + Celery",
+                    "transport": "HTTP + PostgreSQL outbox + Cloudflare Queues",
                     "verified": [
                         "pending",
                         "provider_checkout",

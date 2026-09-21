@@ -1,0 +1,9 @@
+{
+  "name": "wellnest-backend-tooling",
+  "private": true,
+  "scripts": {
+    "deploy:check": "uv run --group deploy pywrangler deploy --dry-run",
+    "deploy": "uv run --group deploy pywrangler deploy"
+  },
+  "devDependencies": { "wrangler": "4.135.0" }
+}

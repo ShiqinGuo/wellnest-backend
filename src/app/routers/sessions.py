@@ -1,5 +1,3 @@
-import os
-
 from fastapi import APIRouter, Request, Response
 
 from app.dependencies.auth import SESSION_COOKIE, IdentityDep
@@ -7,6 +5,7 @@ from app.dependencies.services import SessionServiceDep
 from app.presenters.session import SessionPresenter
 from app.schemas.session import SessionCreated, SessionView
 from app.services.session import SESSION_MAX_AGE
+from app.settings import runtime_value
 
 router = APIRouter(prefix="/api", tags=["sessions"])
 
@@ -22,7 +21,9 @@ async def start_session(
             created.token,
             max_age=SESSION_MAX_AGE,
             httponly=True,
-            secure=os.getenv("WELLNEST_SECURE_COOKIES", "true") == "true",
+            secure=runtime_value(
+                request.scope.get("env"), "WELLNEST_SECURE_COOKIES", "true"
+            ) == "true",
             samesite="lax",
         )
     return SessionCreated(session_id=str(created.session_id))

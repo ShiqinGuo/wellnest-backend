@@ -8,7 +8,6 @@ if path.exists():
     raise SystemExit(".env.payments already exists; left unchanged")
 values = {
     "PAYMENT_DB_PASSWORD": secrets.token_hex(24),
-    "PAYMENT_MQ_PASSWORD": secrets.token_hex(24),
     "WELLNEST_PAYMENT_PROVIDER_KEY": secrets.token_hex(32),
     "WELLNEST_PAYMENT_WEBHOOK_SECRET": secrets.token_hex(32),
 }
