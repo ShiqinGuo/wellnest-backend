@@ -22,7 +22,8 @@ jobs:
       - run: docker compose --env-file .env.payments -f compose.payments.yml up -d --wait
       - name: Start local Worker and queue emulator
         run: |
-          uv run python scripts/dev_workers.py > worker.log 2>&1 &
+          setsid uv run --group deploy python scripts/dev_workers.py > worker.log 2>&1 &
+          echo $! > worker.pid
           for attempt in $(seq 1 90); do
             if curl -fsS http://127.0.0.1:18090/health; then exit 0; fi
             sleep 2
@@ -33,5 +34,11 @@ jobs:
       - run: curl -fsS 'http://127.0.0.1:18090/cdn-cgi/handler/scheduled?cron=*/10%20*%20*%20*%20*'
       - if: failure()
         run: cat worker.log
+      - name: Stop local Worker before dependency cache cleanup
+        if: always()
+        run: |
+          if [ -f worker.pid ]; then
+            kill -- "-$(cat worker.pid)" 2>/dev/null || true
+          fi
       - if: always()
         run: docker compose --env-file .env.payments -f compose.payments.yml down
