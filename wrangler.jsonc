@@ -6,7 +6,10 @@
   "compatibility_date": "2026-09-21",
   "compatibility_flags": ["python_workers"],
   "limits": { "cpu_ms": 1000 },
-  "observability": { "enabled": true },
+  "observability": {
+    "enabled": true,
+    "traces": { "enabled": true, "head_sampling_rate": 1, "persist": true }
+  },
   "placement": { "region": "aws:ap-southeast-1" },
   "vars": {
     "WELLNEST_SECURE_COOKIES": "true",

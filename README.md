@@ -162,3 +162,7 @@ Neon PostgreSQL 使用新加坡 `aws-ap-southeast-1`，Hyperdrive 连接该实�
 2026-09-21 的对照实验保持 6 次业务数据库调用及事务不变，仅将 Worker 靠近原俄亥俄数据库：PATCH 的查询等待从约 1.2 秒降至约 0.3 秒。代表性只读 SQL 的 `EXPLAIN ANALYZE` 执行时间为 0.04–0.10 毫秒，支持优先调整网络地域，未为此合并 SQL 或破坏事务边界。随后迁移到新加坡，保留原库只读存档；切换前按表核对行数与完整内容摘要。切换后已有新写入，不能只改回旧连接就当作无损回滚。
 
 Queue and Cron forward through authenticated Service Binding HTTP fetch to the Singapore-placed backend. They never connect to PostgreSQL directly. Configure the independent `WELLNEST_PAYMENT_INTERNAL_KEY` secret before deployment. Internal endpoints are excluded from OpenAPI and fail closed without credentials. ACK follows committed execution; transport failures retry the same event and lease with existing Outbox fencing and recovery.
+
+## Cloudflare Traces
+
+Native OpenTelemetry-compatible traces are enabled with dashboard persistence and 100% head sampling for this low-volume demo. Open Workers & Pages, select `wellnest-backend` (or `wellnest-assessment`), and open Observability / Traces. Platform spans cover handlers and supported binding/HTTP calls. This does not install Python OpenTelemetry auto-instrumentation: SQL-level spans and end-to-end Outbox/Queue correlation are not guaranteed. No external OTLP collector or temporary request-timing code is included. Adjust `observability.traces.head_sampling_rate` when traffic grows.
