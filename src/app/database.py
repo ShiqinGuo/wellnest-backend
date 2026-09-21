@@ -1,8 +1,11 @@
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
+from time import perf_counter
 from typing import Protocol
 
 import asyncpg
+
+from app.timing import Phase, current_timing, measure
 
 
 class Database(Protocol):
@@ -31,7 +34,8 @@ class ScopedDatabase:
             yield self.active
             return
         if self.cached is None:
-            self.cached = await self.connect()
+            with measure(Phase.connect):
+                self.cached = await self.connect()
         yield self.cached
 
     async def release(self) -> None:
@@ -39,7 +43,8 @@ class ScopedDatabase:
             raise RuntimeError("Cannot release an active transaction")
         if self.cached is not None:
             conn, self.cached = self.cached, None
-            await conn.close()
+            with measure(Phase.close):
+                await conn.close()
 
     @asynccontextmanager
     async def transaction(self):
@@ -48,19 +53,30 @@ class ScopedDatabase:
         async with self.acquired() as conn:
             self.active = conn
             try:
+                started = perf_counter()
                 async with conn.transaction():
-                    yield
+                    if timing := current_timing.get():
+                        timing.add(Phase.begin, perf_counter() - started)
+                    try:
+                        yield
+                    finally:
+                        started = perf_counter()
+                if timing := current_timing.get():
+                    timing.add(Phase.commit, perf_counter() - started)
             finally:
                 self.active = None
 
     async def fetchrow(self, query: str, *args: object) -> asyncpg.Record | None:
         async with self.acquired() as conn:
-            return await conn.fetchrow(query, *args)
+            with measure(Phase.query):
+                return await conn.fetchrow(query, *args)
 
     async def fetchval(self, query: str, *args: object) -> object:
         async with self.acquired() as conn:
-            return await conn.fetchval(query, *args)
+            with measure(Phase.query):
+                return await conn.fetchval(query, *args)
 
     async def execute(self, query: str, *args: object) -> str:
         async with self.acquired() as conn:
-            return await conn.execute(query, *args)
+            with measure(Phase.query):
+                return await conn.execute(query, *args)

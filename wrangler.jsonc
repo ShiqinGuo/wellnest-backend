@@ -7,6 +7,7 @@
   "compatibility_flags": ["python_workers"],
   "limits": { "cpu_ms": 1000 },
   "observability": { "enabled": true },
+  "placement": { "region": "aws:ap-southeast-1" },
   "vars": {
     "WELLNEST_SECURE_COOKIES": "true",
     "WELLNEST_ORIGIN": "https://wellnest-assessment.shiqinguo-apps.workers.dev",
@@ -15,7 +16,7 @@
     "WELLNEST_PAYMENT_MERCHANT_URL": "https://payment.internal"
   },
   "hyperdrive": [
-    { "binding": "HYPERDRIVE", "id": "e021d6688cac42d288aa5159032fde8d" }
+    { "binding": "HYPERDRIVE", "id": "a038add5655b44b0a93170c92b2cfc1b" }
   ],
   "services": [
     { "binding": "PAYMENT_API", "service": "wellnest-backend" }
