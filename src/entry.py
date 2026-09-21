@@ -3,9 +3,14 @@ from urllib.parse import urlsplit
 from workers import WorkerEntrypoint, asgi
 
 from app.main import app
-from app.worker_runtime import consume_batch, relay, safe_relay
+from app.worker_runtime import consume_batch, dispatch, safe_relay
 
-PAYMENT_WRITE_PATHS = ("/api/payments", "/api/mock-", "/api/webhooks/payments/")
+PAYMENT_WRITE_PATHS = (
+    "/api/payments",
+    "/api/mock-",
+    "/api/webhooks/payments/",
+    "/_internal/payments/consume",
+)
 
 
 class Default(WorkerEntrypoint):
@@ -25,4 +30,4 @@ class Default(WorkerEntrypoint):
         await consume_batch(batch, self.env)
 
     async def scheduled(self, controller, env=None, ctx=None):
-        await relay(self.env, reconcile=True)
+        await dispatch(self.env, "recover")

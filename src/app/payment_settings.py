@@ -12,6 +12,8 @@ class PaymentSettings(BaseModel):
     provider_url: str = "http://api:8000"
     public_url: str = "http://localhost:8000"
     merchant_url: str = "http://api:8000"
+    internal_key: SecretStr | None = None
+    dispatch_timeout: int = Field(default=45, gt=0)
     provider_key: SecretStr
     webhook_secret: SecretStr
     amount_minor: int = Field(default=990, gt=0)
@@ -33,8 +35,8 @@ class PaymentSettings(BaseModel):
 
     @model_validator(mode="after")
     def validate_deadlines(self):
-        if not self.execution_timeout < self.lease_seconds:
-            raise ValueError("Require execution timeout < lease")
+        if not self.execution_timeout < self.dispatch_timeout < self.lease_seconds:
+            raise ValueError("Require execution timeout < dispatch timeout < lease")
         return self
 
 

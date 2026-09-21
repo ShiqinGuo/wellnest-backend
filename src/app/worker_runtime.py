@@ -1,19 +1,17 @@
 """Cloudflare adapters; payment services remain independent of the Worker SDK."""
 
-import json
 import logging
-from time import perf_counter
 
+import httpx
 from pydantic import ValidationError
 
-from app.domain.queue_message import PaymentMessage
+from app.domain.queue_message import DeliveryResult, PaymentMessage
 from app.payment_settings import load_payment_settings
 from app.providers.mock_payment import MockPaymentGateway
 from app.providers.worker_http import ServiceBindingTransport
 from app.runtime_database import scoped_database
 from app.services.payment_delivery import PaymentDelivery
 from app.services.payment_workflow import PaymentWorkflow
-from app.timing import RequestTiming, current_timing
 
 logger = logging.getLogger(__name__)
 
@@ -52,45 +50,40 @@ async def safe_relay(env) -> None:
         logger.error("Outbox relay deferred to recovery: %s", type(exc).__name__)
 
 
+async def dispatch(env, path: str, payload: PaymentMessage | None = None) -> DeliveryResult:
+    """Fetch placement applies here; Queue and Cron entrypoints never open a DB connection."""
+    settings = load_payment_settings(env)
+    if settings.internal_key is None:
+        raise RuntimeError("Payment internal key is not configured")
+    transport = ServiceBindingTransport(env.PAYMENT_API, settings.dispatch_timeout)
+    async with httpx.AsyncClient(transport=transport) as client:
+        response = await client.post(
+            f"https://payment.internal/_internal/payments/{path}",
+            headers={"Authorization": f"Bearer {settings.internal_key.get_secret_value()}"},
+            json=payload.model_dump(mode="json") if payload else None,
+        )
+        response.raise_for_status()
+        return DeliveryResult.model_validate_json(response.content)
+
+
 async def consume_batch(batch, env) -> None:
+    settings = load_payment_settings(env)
     for message in batch.messages:
         try:
             payload = PaymentMessage.model_validate_json(message.body)
         except (ValidationError, TypeError):
-            # Preserve poison messages in the configured DLQ after bounded retries.
             logger.error("Invalid payment queue message: id=%s", message.id)
             message.retry()
             continue
-        service = delivery(env)
-        timing = RequestTiming()
-        timing_token = current_timing.set(timing)
-        started = perf_counter()
         try:
-            delay = await service.consume(payload)
-            if delay is None:
+            result = await dispatch(env, "consume", payload)
+            if result.retry_after is None:
                 message.ack()
             else:
-                message.retry(delaySeconds=delay)
+                message.retry(delaySeconds=result.retry_after)
         except Exception as exc:
-            # DB unavailable: do not ACK. Queues retries; Outbox remains the recovery source.
+            # A lost HTTP response may follow a committed transaction: retry the same lease.
             logger.error(
                 "Payment queue unavailable: event=%s error=%s", payload.event_id, type(exc).__name__
             )
-            message.retry(delaySeconds=service.settings.retry_base)
-        finally:
-            try:
-                await service.db.release()
-            finally:
-                print(
-                    json.dumps(
-                        {
-                            "event": "queue_timing",
-                            "event_id": str(payload.event_id),
-                            "duration_ms": round((perf_counter() - started) * 1000, 1),
-                            "durations_ms": dict(timing.durations),
-                            "counts": dict(timing.counts),
-                        }
-                    )
-                )
-                current_timing.reset(timing_token)
-    await safe_relay(env)
+            message.retry(delaySeconds=settings.retry_base)

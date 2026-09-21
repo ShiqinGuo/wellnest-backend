@@ -1,5 +1,3 @@
-import json
-from time import perf_counter
 from uuid import uuid4
 
 from starlette.datastructures import URL, Headers, MutableHeaders
@@ -7,7 +5,6 @@ from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.settings import runtime_value
-from app.timing import RequestTiming, current_timing
 
 
 class RequestPolicy:
@@ -29,8 +26,6 @@ class RequestPolicy:
             if message["type"] == "http.response.start":
                 headers = MutableHeaders(scope=message)
                 headers["X-Request-ID"] = request_id
-                if timing := current_timing.get():
-                    headers["Server-Timing"] = timing.header()
                 headers["Cache-Control"] = "no-store"
                 headers["X-Content-Type-Options"] = "nosniff"
             await send(message)
@@ -47,24 +42,4 @@ class RequestPolicy:
                 status_code=403,
             )
             return await response(scope, receive, send_with_headers)
-        timing = RequestTiming()
-        token = current_timing.set(timing)
-        started = perf_counter()
-        try:
-            await self.app(scope, receive, send_with_headers)
-        finally:
-            route = scope.get("route")
-            print(
-                json.dumps(
-                    {
-                        "event": "request_timing",
-                        "request_id": request_id,
-                        "method": scope["method"],
-                        "route": getattr(route, "path", "unmatched"),
-                        "duration_ms": round((perf_counter() - started) * 1000, 1),
-                        "durations_ms": {k: round(v, 1) for k, v in timing.durations.items()},
-                        "counts": dict(timing.counts),
-                    }
-                )
-            )
-            current_timing.reset(token)
+        await self.app(scope, receive, send_with_headers)

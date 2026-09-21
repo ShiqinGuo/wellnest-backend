@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.errors import AppError
 from app.exception_handlers import app_error, validation_error
 from app.middleware import RequestPolicy
-from app.routers import assessments, payments, sessions, system
+from app.routers import assessments, internal_payments, payments, sessions, system
 
 
 def create_app() -> FastAPI:
@@ -24,7 +24,13 @@ def create_app() -> FastAPI:
         )
     application.add_exception_handler(AppError, app_error)
     application.add_exception_handler(RequestValidationError, validation_error)
-    for router in (system.router, sessions.router, assessments.router, payments.router):
+    for router in (
+        system.router,
+        sessions.router,
+        assessments.router,
+        payments.router,
+        internal_payments.router,
+    ):
         application.include_router(router)
     return application
 

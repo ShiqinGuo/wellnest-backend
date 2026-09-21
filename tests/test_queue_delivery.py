@@ -6,7 +6,7 @@ from pydantic import ValidationError
 from test_payments import workflow as workflow
 
 from app.domain.payment_states import PaymentTask
-from app.domain.queue_message import PaymentMessage
+from app.domain.queue_message import DeliveryResult, PaymentMessage
 from app.services.payment_delivery import PaymentDelivery
 from app.worker_runtime import consume_batch
 
@@ -114,29 +114,25 @@ async def test_batch_poison_does_not_retry_successful_sibling(monkeypatch, workf
     await service.outbox.done(event_id)
     valid = Message(publisher.messages[0].model_dump_json())
     poison = Message('{"event_id":"invalid"}')
-    monkeypatch.setattr("app.worker_runtime.delivery", lambda env: service)
+
+    async def forward(env, path, payload):
+        return DeliveryResult(retry_after=await service.consume(payload))
+
+    monkeypatch.setattr("app.worker_runtime.dispatch", forward)
+    monkeypatch.setattr("app.worker_runtime.load_payment_settings", lambda env: service.settings)
     await consume_batch(SimpleNamespace(messages=[poison, valid]), None)
     assert valid.acked and not valid.retries
     assert poison.retries and not poison.acked
 
 
-async def test_database_outage_does_not_ack(monkeypatch):
-    async def broken(payload):
-        raise ConnectionError("database unavailable")
+async def test_transport_outage_does_not_ack(monkeypatch):
+    async def broken(env, path, payload):
+        raise TimeoutError("execution committed but HTTP response lost")
 
-    async def release():
-        pass
-
-    async def relay(env):
-        pass
-
-    service = SimpleNamespace(
-        consume=broken,
-        db=SimpleNamespace(release=release),
-        settings=SimpleNamespace(retry_base=2),
+    monkeypatch.setattr("app.worker_runtime.dispatch", broken)
+    monkeypatch.setattr(
+        "app.worker_runtime.load_payment_settings", lambda env: SimpleNamespace(retry_base=2)
     )
-    monkeypatch.setattr("app.worker_runtime.delivery", lambda env: service)
-    monkeypatch.setattr("app.worker_runtime.safe_relay", relay)
     message = Message(PaymentMessage(event_id=uuid4(), lease_token=uuid4()).model_dump_json())
     await consume_batch(SimpleNamespace(messages=[message]), None)
     assert not message.acked and message.retries == [{"delaySeconds": 2}]

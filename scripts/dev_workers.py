@@ -2,6 +2,7 @@
 
 import json
 import os
+import secrets
 import subprocess
 from pathlib import Path
 
@@ -26,6 +27,7 @@ def main():
     config.attributes["connection_url"] = database_url
     command.upgrade(config, "head")
     variables = {
+        "WELLNEST_PAYMENT_INTERNAL_KEY": secrets.token_urlsafe(32),
         "WELLNEST_PAYMENT_PROVIDER_KEY": values["WELLNEST_PAYMENT_PROVIDER_KEY"],
         "WELLNEST_PAYMENT_WEBHOOK_SECRET": values["WELLNEST_PAYMENT_WEBHOOK_SECRET"],
         "WELLNEST_PAYMENT_PUBLIC_URL": LOCAL_ORIGIN,

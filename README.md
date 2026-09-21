@@ -158,6 +158,7 @@ CI 运行 pytest、契约检查、Worker 打包，再启动真实 workerd / Mini
 
 Neon PostgreSQL 使用新加坡 `aws-ap-southeast-1`，Hyperdrive 连接该实例；后端 Worker 通过 `placement.region = aws:ap-southeast-1` 在靠近数据库的 Cloudflare 节点执行。前端静态资源保留边缘分发，动态请求通过服务绑定进入后端。Cloudflare Queues 属于平台托管服务，未宣称队列存储和所有事件处理固定在新加坡。
 
-每个 HTTP 请求返回 `Server-Timing`，区分数据库连接、查询累计耗时、事务开始和提交。结构化 `request_timing` 日志另含查询次数、完整请求时长和连接关闭耗时；依赖清理若发生在响应头之后，以日志为准。查询耗时包含网络、协议和数据库等待，不能直接当作 PostgreSQL 的 SQL 执行时间。日志不记录 SQL、参数、Cookie 或用户 ID；`X-Request-ID` 可关联浏览器请求与日志。
 
 2026-09-21 的对照实验保持 6 次业务数据库调用及事务不变，仅将 Worker 靠近原俄亥俄数据库：PATCH 的查询等待从约 1.2 秒降至约 0.3 秒。代表性只读 SQL 的 `EXPLAIN ANALYZE` 执行时间为 0.04–0.10 毫秒，支持优先调整网络地域，未为此合并 SQL 或破坏事务边界。随后迁移到新加坡，保留原库只读存档；切换前按表核对行数与完整内容摘要。切换后已有新写入，不能只改回旧连接就当作无损回滚。
+
+Queue and Cron forward through authenticated Service Binding HTTP fetch to the Singapore-placed backend. They never connect to PostgreSQL directly. Configure the independent `WELLNEST_PAYMENT_INTERNAL_KEY` secret before deployment. Internal endpoints are excluded from OpenAPI and fail closed without credentials. ACK follows committed execution; transport failures retry the same event and lease with existing Outbox fencing and recovery.
