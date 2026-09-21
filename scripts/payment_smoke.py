@@ -13,13 +13,17 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-url", default="http://127.0.0.1:18090")
     args = parser.parse_args()
+    confirmation_trace_id = None
     with httpx.Client(base_url=args.base_url, timeout=15) as client:
 
         def post(path, body=None, key=None):
+            nonlocal confirmation_trace_id
             response = client.post(
                 path, json=body, headers={"Idempotency-Key": key or str(uuid4())}
             )
             response.raise_for_status()
+            if path.endswith("/confirm"):
+                confirmation_trace_id = response.headers.get("X-Trace-ID")
             return response.json()
 
         def get(path):
@@ -88,6 +92,7 @@ def main():
             json.dumps(
                 {
                     "paymentId": created["id"],
+                    "confirmationTraceId": confirmation_trace_id,
                     "status": "passed",
                     "transport": "HTTP + PostgreSQL outbox + Cloudflare Queues",
                     "verified": [

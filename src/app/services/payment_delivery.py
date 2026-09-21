@@ -40,7 +40,11 @@ class PaymentDelivery:
                 await self.db.release()
                 try:
                     await self.publisher.publish(
-                        PaymentMessage(event_id=row["id"], lease_token=row["lease_token"])
+                        PaymentMessage(
+                            event_id=row["id"],
+                            lease_token=row["lease_token"],
+                            traceparent=row["traceparent"],
+                        )
                     )
                 except Exception as exc:
                     await self.outbox.failed(row, type(exc).__name__, self.settings)

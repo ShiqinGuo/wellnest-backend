@@ -163,6 +163,16 @@ Neon PostgreSQL 使用新加坡 `aws-ap-southeast-1`，Hyperdrive 连接该实�
 
 Queue and Cron forward through authenticated Service Binding HTTP fetch to the Singapore-placed backend. They never connect to PostgreSQL directly. Configure the independent `WELLNEST_PAYMENT_INTERNAL_KEY` secret before deployment. Internal endpoints are excluded from OpenAPI and fail closed without credentials. ACK follows committed execution; transport failures retry the same event and lease with existing Outbox fencing and recovery.
 
-## Cloudflare Traces
+## Cloudflare 可观测性
 
-Native OpenTelemetry-compatible traces are enabled with dashboard persistence and 100% head sampling for this low-volume demo. Open Workers & Pages, select `wellnest-backend` (or `wellnest-assessment`), and open Observability / Traces. Platform spans cover handlers and supported binding/HTTP calls. This does not install Python OpenTelemetry auto-instrumentation: SQL-level spans and end-to-end Outbox/Queue correlation are not guaranteed. No external OTLP collector or temporary request-timing code is included. Adjust `observability.traces.head_sampling_rate` when traffic grows.
+FastAPI、HTTPX、asyncpg 的标准 OpenTelemetry Instrumentor 在 `app/telemetry.py` 统一注册。业务服务不创建手工 span。服务绑定使用官方 `AsyncOpenTelemetryTransport`；Outbox 保存 W3C `traceparent`，Queue 适配器负责上下文传递，延迟投递和重试仍接续原 trace。
+
+Workers 使用不需要后台线程的 `SimpleSpanProcessor`，将 SDK span 输出为 JSON 日志。打开 `wellnest-backend → Observability → Logs`，用响应头 `X-Trace-ID` 筛选字段 `trace_id`，再筛选 `event = otel.span`。记录包含 `span_id`、`parent_span_id`、`duration_ms`、开始/结束时间和状态。应用日志附带当前 trace/span ID。SQL 只导出操作名和指纹，不输出 SQL 正文、参数、URL、请求头或异常消息。
+
+支付确认 trace 连接 confirm → Outbox → Queue → 内部 HTTP → webhook → Queue → 权益写入。浏览器轮询和结果读取是独立请求；Outbox 扫描 SQL 也有自身 span，事件执行通过持久化上下文接续。`messaging.delivery.age_ms` 包含重试等待，不等同于纯队列等待。
+
+Cloudflare 原生 Traces 仍显示平台调用；Python SDK span 存在 Logs 中，并未导入原生 Traces 瀑布图。演示使用全量应用采样及平台日志/trace 采样，查询仍受平台保留期、日志限制及导出失败影响。
+
+测试覆盖并发隔离、SQL 父子关系、自定义 HTTP transport 传播、延迟 Outbox 关联、敏感字段过滤和导出失败不影响业务。`uv run python scripts/payment_smoke.py --base-url <URL>` 验证支付闭环并输出 `confirmationTraceId`。
+
+打包使用 uv 0.12.17（与 CI 一致）；旧版 0.10.9 无法解析当前 Pyodide wheel tag。

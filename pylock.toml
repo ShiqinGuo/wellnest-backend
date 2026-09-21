@@ -18,6 +18,11 @@ version = "4.15.1"
 wheels = [{ url = "https://mirrors.aliyun.com/pypi/packages/12/b8/4bd346e22b28902df4d651910f5242c28d84e4a5c2435ca5c3f797ed7e2e/anyio-4.15.1-py3-none-any.whl", hashes = { sha256 = "6152fdbbf9a77fdec97731721bebf7c4c44f7c29b424b0065826173efc7ed101" } }]
 
 [[packages]]
+name = "asgiref"
+version = "3.12.1"
+wheels = [{ url = "https://mirrors.aliyun.com/pypi/packages/c0/1b/54f4ad77cd8a584fa70746c47df988e002cf1ee1eba43364d46f87803647/asgiref-3.12.1-py3-none-any.whl", hashes = { sha256 = "fe386d1c2bff7259ea95929266d12a8cf9a8b5a1c2598402967d8792e7a7c094" } }]
+
+[[packages]]
 name = "asyncpg"
 version = "0.31.0"
 wheels = [{ url = "https://cdn.jsdelivr.net/pyodide/v314.0.7/full/asyncpg-0.31.0-cp314-cp314-pyemscripten_2026_0_wasm32.whl", hashes = { sha256 = "32b4a4ea601ac68af6e8b78de2252e4bcf6c17101607556f63d034c642e8455b" } }]
@@ -39,6 +44,56 @@ wheels = [
 name = "idna"
 version = "3.20"
 wheels = [{ url = "https://mirrors.aliyun.com/pypi/packages/58/a2/bb081bab032533a855d44de1d56f8e8426114ff1ba5d1f07a438a0a654f8/idna-3.20-py3-none-any.whl", hashes = { sha256 = "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c" } }]
+
+[[packages]]
+name = "opentelemetry-api"
+version = "1.44.0"
+wheels = [{ url = "https://mirrors.aliyun.com/pypi/packages/ca/6f/a04e900f465ff3221ccc395522503e2d10e79fa21f2723c8e177aae1e0d1/opentelemetry_api-1.44.0-py3-none-any.whl", hashes = { sha256 = "94b98c893a91b88657eaac1e3ba89618cdb85be6918196705354f34728b2cdef" } }]
+
+[[packages]]
+name = "opentelemetry-instrumentation"
+version = "0.65b0"
+wheels = [{ url = "https://mirrors.aliyun.com/pypi/packages/40/7b/85eab1215f72adf0e68d3dc4a679b9bff993fa679ff34cd8dd378e2659fd/opentelemetry_instrumentation-0.65b0-py3-none-any.whl", hashes = { sha256 = "ea967a72b9939b5fcfdad572753b4306c59dcb99e3f382d95dae04286805e137" } }]
+
+[[packages]]
+name = "opentelemetry-instrumentation-asgi"
+version = "0.65b0"
+wheels = [{ url = "https://mirrors.aliyun.com/pypi/packages/0b/9c/376962840b619d2d55fe8ee2285f8c70971c090e5fff614516fc654a6f3a/opentelemetry_instrumentation_asgi-0.65b0-py3-none-any.whl", hashes = { sha256 = "3a845a8ebd1c4ef0d8263401e6545f5b219b2feee612090d50f578a87e71fd65" } }]
+
+[[packages]]
+name = "opentelemetry-instrumentation-asyncpg"
+version = "0.65b0"
+wheels = [{ url = "https://mirrors.aliyun.com/pypi/packages/d0/18/c021ac484e447fd185a968cf3b134b67c30bfbda6f0add347da1d7c109e2/opentelemetry_instrumentation_asyncpg-0.65b0-py3-none-any.whl", hashes = { sha256 = "9156d2501021b968da0f317eb508d3efb3e7506bf50e00ee477ce0636a12772a" } }]
+
+[[packages]]
+name = "opentelemetry-instrumentation-fastapi"
+version = "0.65b0"
+wheels = [{ url = "https://mirrors.aliyun.com/pypi/packages/fa/b0/c9b0300d33349ecc3dfd2362516eaffc44877e90970e6a52178ff953fec3/opentelemetry_instrumentation_fastapi-0.65b0-py3-none-any.whl", hashes = { sha256 = "cda2610a0ec1b22d19886f33e4d861e9f5dbb886aeaa3a1263b47aff82c36943" } }]
+
+[[packages]]
+name = "opentelemetry-instrumentation-httpx"
+version = "0.65b0"
+wheels = [{ url = "https://mirrors.aliyun.com/pypi/packages/9d/0f/c6144096b4914bbf44b43ba21c962e8f333ff045770b50a3e79ed8bd455f/opentelemetry_instrumentation_httpx-0.65b0-py3-none-any.whl", hashes = { sha256 = "400f1b78afa4ee2332b5debe58e1ed1b317913d58812c952576be76660aeadb1" } }]
+
+[[packages]]
+name = "opentelemetry-sdk"
+version = "1.44.0"
+wheels = [{ url = "https://mirrors.aliyun.com/pypi/packages/e7/23/ff077e61886ee020a17ce9c8b6fa11c601c8d8345b09ea24f605445df62a/opentelemetry_sdk-1.44.0-py3-none-any.whl", hashes = { sha256 = "df081c4c6bcfdb1211e3e86140376792643128a25f8d72d1d27675936e7e96ad" } }]
+
+[[packages]]
+name = "opentelemetry-semantic-conventions"
+version = "0.65b0"
+wheels = [{ url = "https://mirrors.aliyun.com/pypi/packages/a6/0e/49df70d9b81fb5cbae4bbf2a49d865b09bcbcbc4eb53f5851b1027738d78/opentelemetry_semantic_conventions-0.65b0-py3-none-any.whl", hashes = { sha256 = "1cacde7b0ad306f84c5ef08c3dbe1bbaf20165bba6f8bff43b670e555a086bcb" } }]
+
+[[packages]]
+name = "opentelemetry-util-http"
+version = "0.65b0"
+wheels = [{ url = "https://mirrors.aliyun.com/pypi/packages/23/3f/ab8d29df207ce5f470a07fa96ebb48af4e95b7fab7e7635311b9a32f2fab/opentelemetry_util_http-0.65b0-py3-none-any.whl", hashes = { sha256 = "7553b606f963097cb190536dc30556cce85090692e471a422fff30ca29b04348" } }]
+
+[[packages]]
+name = "packaging"
+version = "26.3"
+wheels = [{ url = "https://mirrors.aliyun.com/pypi/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl", hashes = { sha256 = "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c" } }]
 
 [[packages]]
 name = "pydantic"
@@ -72,3 +127,8 @@ wheels = [{ url = "https://mirrors.aliyun.com/pypi/packages/67/81/4add07e5172b7a
 name = "workers-runtime-sdk"
 version = "1.9.0"
 wheels = [{ url = "https://mirrors.aliyun.com/pypi/packages/94/3d/053deb135d4db2ef6f6c3ccdeb86d7829de3c271f7ae02cec73da8f65891/workers_runtime_sdk-1.9.0-py3-none-any.whl", hashes = { sha256 = "36209f94984686264db4e1fd410d51ac3460f2a2ab3cc29869699b975e1e1331" } }]
+
+[[packages]]
+name = "wrapt"
+version = "2.4.1"
+wheels = [{ url = "https://mirrors.aliyun.com/pypi/packages/4f/a2/edcfc8d9a30375791b775715f8501364588f65b494ec4f6930568a19e765/wrapt-2.4.1-py3-none-any.whl", hashes = { sha256 = "1e84ec5d89a0a07a0ef6bcd343f5c8ecdc95601d71de3058cdc63274e86c193c" } }]

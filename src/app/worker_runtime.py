@@ -1,8 +1,11 @@
 """Cloudflare adapters; payment services remain independent of the Worker SDK."""
 
 import logging
+from datetime import UTC, datetime
 
 import httpx
+from opentelemetry.instrumentation.httpx import AsyncOpenTelemetryTransport
+from opentelemetry.trace import SpanKind, Status, StatusCode
 from pydantic import ValidationError
 
 from app.domain.queue_message import DeliveryResult, PaymentMessage
@@ -12,6 +15,7 @@ from app.providers.worker_http import ServiceBindingTransport
 from app.runtime_database import scoped_database
 from app.services.payment_delivery import PaymentDelivery
 from app.services.payment_workflow import PaymentWorkflow
+from app.telemetry import current_traceparent, extracted_context, tracer
 
 logger = logging.getLogger(__name__)
 
@@ -22,14 +26,33 @@ class QueuePublisher:
 
     async def publish(self, message: PaymentMessage) -> None:
         # A JSON string crosses the Python/JS boundary without leaking proxy objects.
-        await self.binding.send(message.model_dump_json())
+        with tracer().start_as_current_span(
+            "wellnest-payments publish",
+            context=extracted_context(message.traceparent),
+            kind=SpanKind.PRODUCER,
+            attributes={
+                "messaging.system": "cloudflare.queues",
+                "messaging.destination.name": "wellnest-payments",
+                "messaging.message.id": str(message.event_id),
+            },
+        ):
+            outgoing = message.model_copy(
+                update={
+                    "traceparent": current_traceparent(),
+                    "published_at": datetime.now(UTC),
+                }
+            )
+            await self.binding.send(outgoing.model_dump_json())
 
 
 def delivery(env) -> PaymentDelivery:
     settings = load_payment_settings(env)
     db = scoped_database(env)
     gateway = MockPaymentGateway(
-        settings, ServiceBindingTransport(env.PAYMENT_API, settings.network_timeout)
+        settings,
+        AsyncOpenTelemetryTransport(
+            ServiceBindingTransport(env.PAYMENT_API, settings.network_timeout)
+        ),
     )
     return PaymentDelivery(PaymentWorkflow(db, settings, gateway), QueuePublisher(env.PAYMENTS))
 
@@ -55,7 +78,9 @@ async def dispatch(env, path: str, payload: PaymentMessage | None = None) -> Del
     settings = load_payment_settings(env)
     if settings.internal_key is None:
         raise RuntimeError("Payment internal key is not configured")
-    transport = ServiceBindingTransport(env.PAYMENT_API, settings.dispatch_timeout)
+    transport = AsyncOpenTelemetryTransport(
+        ServiceBindingTransport(env.PAYMENT_API, settings.dispatch_timeout)
+    )
     async with httpx.AsyncClient(transport=transport) as client:
         response = await client.post(
             f"https://payment.internal/_internal/payments/{path}",
@@ -75,15 +100,36 @@ async def consume_batch(batch, env) -> None:
             logger.error("Invalid payment queue message: id=%s", message.id)
             message.retry()
             continue
-        try:
-            result = await dispatch(env, "consume", payload)
-            if result.retry_after is None:
-                message.ack()
-            else:
-                message.retry(delaySeconds=result.retry_after)
-        except Exception as exc:
-            # A lost HTTP response may follow a committed transaction: retry the same lease.
-            logger.error(
-                "Payment queue unavailable: event=%s error=%s", payload.event_id, type(exc).__name__
-            )
-            message.retry(delaySeconds=settings.retry_base)
+        with tracer().start_as_current_span(
+            "wellnest-payments process",
+            context=extracted_context(payload.traceparent),
+            kind=SpanKind.CONSUMER,
+            attributes={
+                "messaging.system": "cloudflare.queues",
+                "messaging.destination.name": "wellnest-payments",
+                "messaging.message.id": str(payload.event_id),
+            },
+        ) as span:
+            if payload.published_at:
+                span.set_attribute(
+                    "messaging.delivery.age_ms",
+                    max(0, (datetime.now(UTC) - payload.published_at).total_seconds() * 1000),
+                )
+            try:
+                result = await dispatch(env, "consume", payload)
+                if result.retry_after is None:
+                    message.ack()
+                    span.set_attribute("messaging.delivery.action", "ack")
+                else:
+                    message.retry(delaySeconds=result.retry_after)
+                    span.set_attribute("messaging.delivery.action", "retry")
+            except Exception as exc:
+                span.record_exception(exc)
+                span.set_status(Status(StatusCode.ERROR))
+                span.set_attribute("messaging.delivery.action", "retry")
+                logger.error(
+                    "Payment queue unavailable: event=%s error=%s",
+                    payload.event_id,
+                    type(exc).__name__,
+                )
+                message.retry(delaySeconds=settings.retry_base)

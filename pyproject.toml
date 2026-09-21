@@ -8,6 +8,10 @@ dependencies = [
     "pydantic>=2.10,<3",
     "asyncpg>=0.30,<1",
     "httpx>=0.28,<1",
+    "opentelemetry-sdk>=1.44.0",
+    "opentelemetry-instrumentation-fastapi>=0.65b0",
+    "opentelemetry-instrumentation-httpx>=0.65b0",
+    "opentelemetry-instrumentation-asyncpg>=0.65b0",
 ]
 
 [dependency-groups]

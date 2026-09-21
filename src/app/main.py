@@ -8,6 +8,7 @@ from app.errors import AppError
 from app.exception_handlers import app_error, validation_error
 from app.middleware import RequestPolicy
 from app.routers import assessments, internal_payments, payments, sessions, system
+from app.telemetry import configure_telemetry
 
 
 def create_app() -> FastAPI:
@@ -32,6 +33,7 @@ def create_app() -> FastAPI:
         internal_payments.router,
     ):
         application.include_router(router)
+    configure_telemetry(application)
     return application
 
 

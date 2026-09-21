@@ -1,5 +1,6 @@
 from uuid import uuid4
 
+from opentelemetry import trace
 from starlette.datastructures import URL, Headers, MutableHeaders
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -26,6 +27,9 @@ class RequestPolicy:
             if message["type"] == "http.response.start":
                 headers = MutableHeaders(scope=message)
                 headers["X-Request-ID"] = request_id
+                context = trace.get_current_span().get_span_context()
+                if context.is_valid:
+                    headers["X-Trace-ID"] = format(context.trace_id, "032x")
                 headers["Cache-Control"] = "no-store"
                 headers["X-Content-Type-Options"] = "nosniff"
             await send(message)
