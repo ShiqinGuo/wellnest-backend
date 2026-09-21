@@ -1,3 +1,4 @@
+import logging
 from uuid import uuid4
 
 from opentelemetry import trace
@@ -5,7 +6,10 @@ from starlette.datastructures import URL, Headers, MutableHeaders
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from app.errors import ErrorCode
 from app.settings import runtime_value
+
+logger = logging.getLogger(__name__)
 
 
 class RequestPolicy:
@@ -23,8 +27,12 @@ class RequestPolicy:
         url = URL(scope=scope)
         allowed = runtime_value(scope.get("env"), "WELLNEST_ORIGIN", f"{url.scheme}://{url.netloc}")
 
+        response_started = False
+
         async def send_with_headers(message: Message):
+            nonlocal response_started
             if message["type"] == "http.response.start":
+                response_started = True
                 headers = MutableHeaders(scope=message)
                 headers["X-Request-ID"] = request_id
                 context = trace.get_current_span().get_span_context()
@@ -46,4 +54,21 @@ class RequestPolicy:
                 status_code=403,
             )
             return await response(scope, receive, send_with_headers)
-        await self.app(scope, receive, send_with_headers)
+        try:
+            await self.app(scope, receive, send_with_headers)
+        except Exception:
+            logger.exception("Unhandled request failure")
+            if response_started:
+                raise
+            response = JSONResponse(
+                {
+                    "error": {
+                        "code": ErrorCode.internal_error,
+                        "message": "Internal server error",
+                        "details": {},
+                        "requestId": request_id,
+                    }
+                },
+                status_code=500,
+            )
+            await response(scope, receive, send_with_headers)

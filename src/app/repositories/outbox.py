@@ -1,9 +1,10 @@
+import json
 from uuid import UUID, uuid4
 
 from app.database import Database
 from app.domain.payment_states import OutboxEvent, OutboxStateMachine, OutboxStatus, PaymentTask
 from app.payment_settings import PaymentSettings
-from app.telemetry import current_traceparent
+from app.telemetry import current_headers
 
 
 class OutboxRepository:
@@ -12,13 +13,13 @@ class OutboxRepository:
 
     async def enqueue(self, task: PaymentTask, aggregate_id: UUID) -> None:
         await self.conn.execute(
-            """INSERT INTO outbox_events(id,task,aggregate_id,status,available_at,traceparent)
-            VALUES($1,$2,$3,$4,now(),$5) ON CONFLICT DO NOTHING""",
+            """INSERT INTO outbox_events(id,task,aggregate_id,status,available_at,headers)
+            VALUES($1,$2,$3,$4,now(),$5::jsonb) ON CONFLICT DO NOTHING""",
             uuid4(),
             task,
             aggregate_id,
             OutboxStatus.pending,
-            current_traceparent(),
+            json.dumps(current_headers()),
         )
 
     async def claim(self, settings: PaymentSettings):

@@ -74,7 +74,7 @@ class Outbox(CreatedAtMixin, Base):
     status: Mapped[OutboxStatus] = mapped_column()
     attempts: Mapped[int] = mapped_column(server_default="0")
     available_at: Mapped[Timestamp] = mapped_column()
-    traceparent: Mapped[str | None] = mapped_column(String(55))
+    headers: Mapped[JsonObject] = mapped_column(server_default=text("'{}'::jsonb"))
     lease_token: Mapped[UUID | None] = mapped_column()
     lease_until: Mapped[Timestamp | None] = mapped_column()
     processed_at: Mapped[Timestamp | None] = mapped_column()

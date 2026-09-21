@@ -10,9 +10,8 @@ class PaymentMessage(BaseModel):
     version: Literal[1] = 1
     event_id: UUID
     lease_token: UUID
-    traceparent: str | None = Field(
-        default=None, pattern=r"^00-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$"
-    )
+    headers: dict[str, str] = Field(default_factory=dict)
+
     published_at: AwareDatetime | None = None
 
 

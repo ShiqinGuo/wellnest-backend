@@ -189,8 +189,10 @@ async def test_failed_receipt_rolls_back_payment(client, monkeypatch):
         raise RuntimeError("Injected receipt failure")
 
     monkeypatch.setattr(CommandRepository, "record", fail)
-    with pytest.raises(RuntimeError, match="Injected"):
-        await client.post("/api/payments", json={}, headers=key())
+    response = await client.post("/api/payments", json={}, headers=key())
+    assert response.status_code == 500
+    assert response.json()["error"]["code"] == "INTERNAL_ERROR"
+    assert "Injected" not in response.text
     assert (await client.get("/api/session")).json()["subscriptionStatus"] == "inactive"
     assert (await client.get(f"/api/assessments/{a['id']}/result")).json()["access"] == "free"
     monkeypatch.setattr(CommandRepository, "record", original)

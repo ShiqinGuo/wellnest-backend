@@ -1,6 +1,7 @@
 """Outbox owns the retry budget; Queues transports a fenced event reference."""
 
 import asyncio
+import json
 import logging
 from typing import Protocol
 
@@ -43,13 +44,16 @@ class PaymentDelivery:
                         PaymentMessage(
                             event_id=row["id"],
                             lease_token=row["lease_token"],
-                            traceparent=row["traceparent"],
+                            headers=json.loads(row["headers"]),
                         )
                     )
                 except Exception as exc:
                     await self.outbox.failed(row, type(exc).__name__, self.settings)
                     logger.warning(
-                        "Queue publish failed: event=%s error=%s", row["id"], type(exc).__name__
+                        "Queue publish failed: event=%s error=%s",
+                        row["id"],
+                        type(exc).__name__,
+                        exc_info=True,
                     )
                 else:
                     await self.outbox.published(row)
@@ -73,7 +77,10 @@ class PaymentDelivery:
                 await self.workflow.execute(message.event_id)
         except Exception as exc:
             logger.warning(
-                "Queue execution failed: event=%s error=%s", message.event_id, type(exc).__name__
+                "Queue execution failed: event=%s error=%s",
+                message.event_id,
+                type(exc).__name__,
+                exc_info=True,
             )
             if row["attempts"] >= self.settings.max_attempts:
                 await self.outbox.failed(row, type(exc).__name__, self.settings)

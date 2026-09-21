@@ -4,7 +4,8 @@ import hashlib
 import json
 import logging
 import sys
-from collections.abc import Sequence
+import traceback
+from collections.abc import Mapping, Sequence
 
 from opentelemetry import trace
 from opentelemetry.instrumentation.asyncpg import AsyncPGInstrumentor
@@ -36,6 +37,7 @@ SAFE_ATTRIBUTES = frozenset(
         "messaging.delivery.attempt",
     }
 )
+logger = logging.getLogger(__name__)
 _initialized = False
 
 
@@ -53,6 +55,13 @@ def span_record(span: ReadableSpan) -> dict:
         "span_id": format(span.context.span_id, "016x"),
         "parent_span_id": format(span.parent.span_id, "016x") if span.parent else None,
         "name": span.name,
+        "links": [
+            {
+                "trace_id": format(link.context.trace_id, "032x"),
+                "span_id": format(link.context.span_id, "016x"),
+            }
+            for link in span.links
+        ],
         "kind": span.kind.name,
         "start_time_unix_nano": str(span.start_time),
         "end_time_unix_nano": str(span.end_time),
@@ -71,7 +80,7 @@ class CloudflareLogExporter(SpanExporter):
     def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
         try:
             for span in spans:
-                print(json.dumps(span_record(span), ensure_ascii=True))
+                logger.info("%s", span.name, extra={"span_record": span_record(span)})
         except Exception:
             # Observability failure must never fail the transaction being observed.
             return SpanExportResult.FAILURE
@@ -84,27 +93,39 @@ class CloudflareLogExporter(SpanExporter):
 class TraceLogFormatter(logging.Formatter):
     def format(self, record):
         context = trace.get_current_span().get_span_context()
-        return json.dumps(
-            {
-                "event": "application.log",
-                "level": record.levelname,
-                "logger": record.name,
-                "message": record.getMessage(),
-                "trace_id": format(context.trace_id, "032x") if context.is_valid else None,
-                "span_id": format(context.span_id, "016x") if context.is_valid else None,
-            },
-            ensure_ascii=True,
-        )
+        payload = {
+            "event": "application.log",
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+            "trace_id": format(context.trace_id, "032x") if context.is_valid else None,
+            "span_id": format(context.span_id, "016x") if context.is_valid else None,
+        }
+        if hasattr(record, "span_record"):
+            payload.update(record.span_record)
+        if record.exc_info and record.exc_info[0]:
+            # Retain locations without exception messages, source lines or local values.
+            payload["exception_type"] = record.exc_info[0].__name__
+            payload["frames"] = [
+                {"file": frame.filename, "line": frame.lineno, "function": frame.name}
+                for frame in traceback.extract_tb(record.exc_info[2])
+            ]
+        return json.dumps(payload, ensure_ascii=True)
 
 
-def current_traceparent() -> str | None:
-    carrier = {}
+def current_headers() -> dict[str, str]:
+    carrier: dict[str, str] = {}
     PROPAGATOR.inject(carrier)
-    return carrier.get("traceparent")
+    return carrier
 
 
-def extracted_context(traceparent: str | None):
-    return PROPAGATOR.extract({"traceparent": traceparent} if traceparent else {})
+def extracted_context(headers: Mapping[str, str]):
+    return PROPAGATOR.extract(headers)
+
+
+def message_links(headers: Mapping[str, str]):
+    context = trace.get_current_span(extracted_context(headers)).get_span_context()
+    return [trace.Link(context)] if context.is_valid else []
 
 
 def tracer():
@@ -126,10 +147,10 @@ def configure_telemetry(app):
         handler.setFormatter(TraceLogFormatter())
         logging.getLogger("app").addHandler(handler)
         logging.getLogger("app").propagate = False
+        logging.getLogger("app").setLevel(logging.INFO)
         _initialized = True
     FastAPIInstrumentor.instrument_app(
         app,
         excluded_urls=r".*/health(?:\?.*)?$,.*/ready(?:\?.*)?$",
         exclude_spans=["receive", "send"],
     )
-

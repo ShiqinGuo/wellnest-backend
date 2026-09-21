@@ -15,7 +15,7 @@ from app.providers.worker_http import ServiceBindingTransport
 from app.runtime_database import scoped_database
 from app.services.payment_delivery import PaymentDelivery
 from app.services.payment_workflow import PaymentWorkflow
-from app.telemetry import current_traceparent, extracted_context, tracer
+from app.telemetry import current_headers, extracted_context, message_links, tracer
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ class QueuePublisher:
         # A JSON string crosses the Python/JS boundary without leaking proxy objects.
         with tracer().start_as_current_span(
             "wellnest-payments publish",
-            context=extracted_context(message.traceparent),
+            context=extracted_context(message.headers),
             kind=SpanKind.PRODUCER,
             attributes={
                 "messaging.system": "cloudflare.queues",
@@ -38,7 +38,7 @@ class QueuePublisher:
         ):
             outgoing = message.model_copy(
                 update={
-                    "traceparent": current_traceparent(),
+                    "headers": {**message.headers, **current_headers()},
                     "published_at": datetime.now(UTC),
                 }
             )
@@ -70,7 +70,7 @@ async def safe_relay(env) -> None:
         await relay(env)
     except Exception as exc:
         # The transaction is already durable. Cron recovers even if waitUntil is cut short.
-        logger.error("Outbox relay deferred to recovery: %s", type(exc).__name__)
+        logger.error("Outbox relay deferred to recovery: %s", type(exc).__name__, exc_info=True)
 
 
 async def dispatch(env, path: str, payload: PaymentMessage | None = None) -> DeliveryResult:
@@ -102,8 +102,9 @@ async def consume_batch(batch, env) -> None:
             continue
         with tracer().start_as_current_span(
             "wellnest-payments process",
-            context=extracted_context(payload.traceparent),
+            context=extracted_context(payload.headers),
             kind=SpanKind.CONSUMER,
+            links=message_links(payload.headers),
             attributes={
                 "messaging.system": "cloudflare.queues",
                 "messaging.destination.name": "wellnest-payments",
@@ -131,5 +132,6 @@ async def consume_batch(batch, env) -> None:
                     "Payment queue unavailable: event=%s error=%s",
                     payload.event_id,
                     type(exc).__name__,
+                    exc_info=True,
                 )
                 message.retry(delaySeconds=settings.retry_base)

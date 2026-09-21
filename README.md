@@ -165,7 +165,7 @@ Queue and Cron forward through authenticated Service Binding HTTP fetch to the S
 
 ## Cloudflare 可观测性
 
-FastAPI、HTTPX、asyncpg 的标准 OpenTelemetry Instrumentor 在 `app/telemetry.py` 统一注册。业务服务不创建手工 span。服务绑定使用官方 `AsyncOpenTelemetryTransport`；Outbox 保存 W3C `traceparent`，Queue 适配器负责上下文传递，延迟投递和重试仍接续原 trace。
+FastAPI、HTTPX、asyncpg 的标准 OpenTelemetry Instrumentor 在 `app/telemetry.py` 统一注册。业务服务不创建手工 span。服务绑定使用官方 `AsyncOpenTelemetryTransport`；Outbox 的通用 JSONB `headers` 保存 W3C `traceparent` / `tracestate`，Queue 适配器负责上下文传递。单消息消费采用父子关系，同时记录 Span Link；延迟投递和重试仍接续原 trace。
 
 Workers 使用不需要后台线程的 `SimpleSpanProcessor`，将 SDK span 输出为 JSON 日志。打开 `wellnest-backend → Observability → Logs`，用响应头 `X-Trace-ID` 筛选字段 `trace_id`，再筛选 `event = otel.span`。记录包含 `span_id`、`parent_span_id`、`duration_ms`、开始/结束时间和状态。应用日志附带当前 trace/span ID。SQL 只导出操作名和指纹，不输出 SQL 正文、参数、URL、请求头或异常消息。
 
@@ -176,3 +176,8 @@ Cloudflare 原生 Traces 仍显示平台调用；Python SDK span 存在 Logs 中
 测试覆盖并发隔离、SQL 父子关系、自定义 HTTP transport 传播、延迟 Outbox 关联、敏感字段过滤和导出失败不影响业务。`uv run python scripts/payment_smoke.py --base-url <URL>` 验证支付闭环并输出 `confirmationTraceId`。
 
 打包使用 uv 0.12.17（与 CI 一致）；旧版 0.10.9 无法解析当前 Pyodide wheel tag。
+
+
+应用日志与 span 均通过 Python logging 输出结构化 JSON，包含 level/message 和 trace_id/span_id。异常记录类型和调用栈位置，不输出异常消息、SQL 参数、局部变量或请求凭据；未处理的请求异常返回统一 INTERNAL_ERROR。
+
+迁移 `g50922_message_headers` 回填通用 headers 并删除专用 traceparent 列，无旧消息兼容层。代码和数据库需配套发布；回滚时也需配套 downgrade。已执行的历史迁移保持不变。

@@ -3,6 +3,7 @@ from http import HTTPStatus
 
 
 class ErrorCode(StrEnum):
+    internal_error = "INTERNAL_ERROR"
     payment_conflict = "PAYMENT_CONFLICT"
     payment_mismatch = "PAYMENT_MISMATCH"
     invalid_signature = "INVALID_SIGNATURE"
