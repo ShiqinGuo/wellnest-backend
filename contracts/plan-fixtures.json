@@ -1,0 +1,1254 @@
+{
+  "messages": [
+    {
+      "code": "preference",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": "energy"
+      }
+    },
+    {
+      "code": "movement_title",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "experience",
+      "params": {
+        "experience": "beginner",
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "activity",
+      "params": {
+        "experience": null,
+        "activity": "low",
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "seated",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "movement_break",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "preference",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": "mobility"
+      }
+    },
+    {
+      "code": "gentle_movement",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "preference",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": "routine"
+      }
+    },
+    {
+      "code": "preference",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": "strength"
+      }
+    },
+    {
+      "code": "familiar_strength",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "familiar_activity",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "on_feet",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "observe_activity",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "activity",
+      "params": {
+        "experience": null,
+        "activity": "light",
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "activity",
+      "params": {
+        "experience": null,
+        "activity": "moderate",
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "activity",
+      "params": {
+        "experience": null,
+        "activity": "high",
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "experience",
+      "params": {
+        "experience": "returning",
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "experience",
+      "params": {
+        "experience": "regular",
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "limitation_boundary",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": [
+          "back"
+        ],
+        "preference": null
+      }
+    },
+    {
+      "code": "seek_advice",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "limitation_boundary",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": [
+          "knees"
+        ],
+        "preference": null
+      }
+    },
+    {
+      "code": "limitation_boundary",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": [
+          "back",
+          "knees"
+        ],
+        "preference": null
+      }
+    },
+    {
+      "code": "recovery_title",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "sleep_energy",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": "short",
+        "energy": "low_energy",
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "record_sleep",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "sleep_energy",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": "short",
+        "energy": "afternoon_dip",
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "sleep_energy",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": "short",
+        "energy": "steady",
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "sleep_energy",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": "variable",
+        "energy": "low_energy",
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "sleep_energy",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": "variable",
+        "energy": "afternoon_dip",
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "sleep_energy",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": "variable",
+        "energy": "steady",
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "sleep_energy",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": "rested",
+        "energy": "low_energy",
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "sleep_energy",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": "rested",
+        "energy": "afternoon_dip",
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "sleep_energy",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": "rested",
+        "energy": "steady",
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "keep_sleep",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "meals_title",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "meal_habits",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": "regular_meals",
+        "foodHabits": [
+          "none"
+        ],
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "keep_meals",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "meal_habits",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": "regular_meals",
+        "foodHabits": [
+          "late_snacks"
+        ],
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "record_snack",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "meal_habits",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": "regular_meals",
+        "foodHabits": [
+          "sweet_drinks"
+        ],
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "unsweetened_drink",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "meal_habits",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": "regular_meals",
+        "foodHabits": [
+          "sweets"
+        ],
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "record_sweets",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "meal_habits",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": "regular_meals",
+        "foodHabits": [
+          "late_snacks",
+          "sweet_drinks"
+        ],
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "meal_habits",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": "regular_meals",
+        "foodHabits": [
+          "late_snacks",
+          "sweets"
+        ],
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "meal_habits",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": "regular_meals",
+        "foodHabits": [
+          "sweet_drinks",
+          "sweets"
+        ],
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "meal_habits",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": "regular_meals",
+        "foodHabits": [
+          "late_snacks",
+          "sweet_drinks",
+          "sweets"
+        ],
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "meal_habits",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": "skipped_meals",
+        "foodHabits": [
+          "none"
+        ],
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "protect_meal",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "meal_habits",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": "skipped_meals",
+        "foodHabits": [
+          "late_snacks"
+        ],
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "meal_habits",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": "skipped_meals",
+        "foodHabits": [
+          "sweet_drinks"
+        ],
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "meal_habits",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": "skipped_meals",
+        "foodHabits": [
+          "sweets"
+        ],
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "meal_habits",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": "skipped_meals",
+        "foodHabits": [
+          "late_snacks",
+          "sweet_drinks"
+        ],
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "meal_habits",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": "skipped_meals",
+        "foodHabits": [
+          "late_snacks",
+          "sweets"
+        ],
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "meal_habits",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": "skipped_meals",
+        "foodHabits": [
+          "sweet_drinks",
+          "sweets"
+        ],
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "meal_habits",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": "skipped_meals",
+        "foodHabits": [
+          "late_snacks",
+          "sweet_drinks",
+          "sweets"
+        ],
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "meal_habits",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": "irregular_meals",
+        "foodHabits": [
+          "none"
+        ],
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "meal_habits",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": "irregular_meals",
+        "foodHabits": [
+          "late_snacks"
+        ],
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "meal_habits",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": "irregular_meals",
+        "foodHabits": [
+          "sweet_drinks"
+        ],
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "meal_habits",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": "irregular_meals",
+        "foodHabits": [
+          "sweets"
+        ],
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "meal_habits",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": "irregular_meals",
+        "foodHabits": [
+          "late_snacks",
+          "sweet_drinks"
+        ],
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "meal_habits",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": "irregular_meals",
+        "foodHabits": [
+          "late_snacks",
+          "sweets"
+        ],
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "meal_habits",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": "irregular_meals",
+        "foodHabits": [
+          "sweet_drinks",
+          "sweets"
+        ],
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "meal_habits",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": "irregular_meals",
+        "foodHabits": [
+          "late_snacks",
+          "sweet_drinks",
+          "sweets"
+        ],
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "consistency_title",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "barrier",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": "time",
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "pair_action",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "barrier",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": "motivation",
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "record_action",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "barrier",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": "unsure",
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "try_easiest",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "barrier",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": "no_barrier",
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "review_routine",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": null,
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "schedule_action",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": "morning",
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "schedule_action",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": "midday",
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "schedule_action",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": "evening",
+        "limitations": null,
+        "preference": null
+      }
+    },
+    {
+      "code": "schedule_action",
+      "params": {
+        "experience": null,
+        "activity": null,
+        "sleep": null,
+        "energy": null,
+        "mealRhythm": null,
+        "foodHabits": null,
+        "barrier": null,
+        "timeWindow": "varies",
+        "limitations": null,
+        "preference": null
+      }
+    }
+  ],
+  "resultCodes": [
+    "adult_scope",
+    "demo_energy_budget",
+    "high",
+    "linear_projection",
+    "overweight",
+    "reference",
+    "resting_energy",
+    "underweight"
+  ]
+}

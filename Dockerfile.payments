@@ -1,0 +1,14 @@
+FROM python:3.13-slim-bookworm
+RUN pip install --no-cache-dir uv==0.12.17
+WORKDIR /app
+COPY pyproject.toml uv.lock ./
+RUN uv sync --locked --no-dev --group migrations
+COPY src ./src
+COPY migrations ./migrations
+COPY scripts/payment_outbox.py ./scripts/payment_outbox.py
+COPY alembic.ini ./
+ENV PYTHONPATH=/app/src
+ENV PATH=/app/.venv/bin:$PATH
+RUN useradd --uid 10001 --create-home wellnest
+USER wellnest
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

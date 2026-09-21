@@ -1,0 +1,2380 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Wellnest API",
+    "version": "0.2.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Ready",
+        "operationId": "ready_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions": {
+      "post": {
+        "tags": [
+          "sessions"
+        ],
+        "summary": "Start Session",
+        "operationId": "start_session_api_sessions_post",
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionCreated"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/session": {
+      "get": {
+        "tags": [
+          "sessions"
+        ],
+        "summary": "Session",
+        "operationId": "session_api_session_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assessments": {
+      "post": {
+        "tags": [
+          "assessments"
+        ],
+        "summary": "Create",
+        "operationId": "create_api_assessments_post",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assessments/{assessment_id}": {
+      "get": {
+        "tags": [
+          "assessments"
+        ],
+        "summary": "Get Assessment",
+        "operationId": "get_assessment_api_assessments__assessment_id__get",
+        "parameters": [
+          {
+            "name": "assessment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "当前会话所属的测评 ID",
+              "title": "Assessment Id"
+            },
+            "description": "当前会话所属的测评 ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "assessments"
+        ],
+        "summary": "Update",
+        "operationId": "update_api_assessments__assessment_id__patch",
+        "parameters": [
+          {
+            "name": "assessment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "当前会话所属的测评 ID",
+              "title": "Assessment Id"
+            },
+            "description": "当前会话所属的测评 ID"
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assessments/{assessment_id}/submit": {
+      "post": {
+        "tags": [
+          "assessments"
+        ],
+        "summary": "Submit",
+        "operationId": "submit_api_assessments__assessment_id__submit_post",
+        "parameters": [
+          {
+            "name": "assessment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "当前会话所属的测评 ID",
+              "title": "Assessment Id"
+            },
+            "description": "当前会话所属的测评 ID"
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Submitted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assessments/{assessment_id}/result": {
+      "get": {
+        "tags": [
+          "assessments",
+          "results"
+        ],
+        "summary": "Result",
+        "operationId": "result_api_assessments__assessment_id__result_get",
+        "parameters": [
+          {
+            "name": "assessment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "当前会话所属的测评 ID",
+              "title": "Assessment Id"
+            },
+            "description": "当前会话所属的测评 ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FreeResult"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MemberResult"
+                    }
+                  ],
+                  "title": "Response Result Api Assessments  Assessment Id  Result Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assessments/{assessment_id}/guidance/retry": {
+      "post": {
+        "tags": [
+          "assessments",
+          "results"
+        ],
+        "summary": "Retry Guidance",
+        "operationId": "retry_guidance_api_assessments__assessment_id__guidance_retry_post",
+        "parameters": [
+          {
+            "name": "assessment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "当前会话所属的测评 ID",
+              "title": "Assessment Id"
+            },
+            "description": "当前会话所属的测评 ID"
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Guidance"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/payments": {
+      "post": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Create Payment",
+        "operationId": "create_payment_api_payments_post",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/payments/{payment_id}": {
+      "get": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Get Payment",
+        "operationId": "get_payment_api_payments__payment_id__get",
+        "parameters": [
+          {
+            "name": "payment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Payment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/payments/{payment_id}/refresh": {
+      "post": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Refresh",
+        "operationId": "refresh_api_payments__payment_id__refresh_post",
+        "parameters": [
+          {
+            "name": "payment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Payment Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Accepted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/webhooks/payments/mock": {
+      "post": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Webhook",
+        "operationId": "webhook_api_webhooks_payments_mock_post",
+        "parameters": [
+          {
+            "name": "x-payment-timestamp",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Payment-Timestamp"
+            }
+          },
+          {
+            "name": "x-payment-signature",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Payment-Signature"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Accepted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "merchant_payment_id": {
+                    "format": "uuid",
+                    "title": "Merchant Payment Id",
+                    "type": "string"
+                  },
+                  "amount_minor": {
+                    "exclusiveMinimum": 0,
+                    "title": "Amount Minor",
+                    "type": "integer"
+                  },
+                  "currency": {
+                    "$ref": "#/components/schemas/Currency"
+                  },
+                  "transaction_id": {
+                    "format": "uuid",
+                    "title": "Transaction Id",
+                    "type": "string"
+                  },
+                  "status": {
+                    "$ref": "#/components/schemas/PaymentStatus"
+                  },
+                  "checkout_url": {
+                    "title": "Checkout Url",
+                    "type": "string"
+                  },
+                  "expires_at": {
+                    "format": "date-time",
+                    "title": "Expires At",
+                    "type": "string"
+                  },
+                  "event_id": {
+                    "format": "uuid",
+                    "title": "Event Id",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "merchant_payment_id",
+                  "amount_minor",
+                  "currency",
+                  "transaction_id",
+                  "status",
+                  "checkout_url",
+                  "expires_at",
+                  "event_id"
+                ],
+                "title": "ChannelNotification",
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mock-provider/payments": {
+      "post": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Provider Create",
+        "operationId": "provider_create_api_mock_provider_payments_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChannelCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelPayment"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mock-provider/payments/{merchant_payment_id}": {
+      "get": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Provider Query",
+        "operationId": "provider_query_api_mock_provider_payments__merchant_payment_id__get",
+        "parameters": [
+          {
+            "name": "merchant_payment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Merchant Payment Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelPayment"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mock-checkout/{token}": {
+      "get": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Checkout",
+        "operationId": "checkout_api_mock_checkout__token__get",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelPayment"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mock-checkout/{token}/confirm": {
+      "post": {
+        "tags": [
+          "payments"
+        ],
+        "summary": "Confirm",
+        "operationId": "confirm_api_mock_checkout__token__confirm_post",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckoutConfirm"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelPayment"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Accepted": {
+        "properties": {
+          "accepted": {
+            "type": "boolean",
+            "const": true,
+            "title": "Accepted",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Accepted"
+      },
+      "Activity": {
+        "type": "string",
+        "enum": [
+          "low",
+          "light",
+          "moderate",
+          "high"
+        ],
+        "title": "Activity"
+      },
+      "Answers": {
+        "properties": {
+          "sex": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Sex"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "goal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Goal"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "age": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 80.0,
+                "minimum": 18.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age"
+          },
+          "heightCm": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 220.0,
+                "minimum": 120.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heightcm"
+          },
+          "weightKg": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 250.0,
+                "minimum": 35.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weightkg"
+          },
+          "targetWeightKg": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 250.0,
+                "minimum": 35.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Targetweightkg"
+          },
+          "activity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Activity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "secondaryGoals": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SecondaryGoal"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secondarygoals"
+          },
+          "experience": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Experience"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "dailyActivity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DailyActivity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "limitations": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Limitation"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limitations"
+          },
+          "sleep": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Sleep"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "energy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Energy"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mealRhythm": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MealRhythm"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "foodHabits": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/FoodHabit"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Foodhabits"
+          },
+          "barrier": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Barrier"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "timeWindow": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimeWindow"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Answers"
+      },
+      "AssessmentPatch": {
+        "properties": {
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expectedversion"
+          },
+          "answers": {
+            "$ref": "#/components/schemas/Answers"
+          },
+          "resumeStepId": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Step"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expectedVersion"
+        ],
+        "title": "AssessmentPatch"
+      },
+      "AssessmentStatus": {
+        "type": "string",
+        "enum": [
+          "draft",
+          "completed"
+        ],
+        "title": "AssessmentStatus"
+      },
+      "AssessmentView": {
+        "properties": {
+          "planPreview": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlanPreview"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AssessmentStatus"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "flowVersion": {
+            "type": "string",
+            "title": "Flowversion"
+          },
+          "resumeStepId": {
+            "$ref": "#/components/schemas/Step"
+          },
+          "answers": {
+            "$ref": "#/components/schemas/Answers"
+          },
+          "completedSteps": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Completedsteps"
+          },
+          "missingFields": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missingfields"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "version",
+          "flowVersion",
+          "resumeStepId",
+          "answers",
+          "completedSteps",
+          "missingFields",
+          "updatedAt"
+        ],
+        "title": "AssessmentView"
+      },
+      "Barrier": {
+        "type": "string",
+        "enum": [
+          "time",
+          "motivation",
+          "unsure",
+          "no_barrier"
+        ],
+        "title": "Barrier"
+      },
+      "BmiCategory": {
+        "type": "string",
+        "enum": [
+          "underweight",
+          "reference",
+          "overweight",
+          "high"
+        ],
+        "title": "BmiCategory"
+      },
+      "Calculation": {
+        "properties": {
+          "planPreview": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlanPreview"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "guidance": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Guidance"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "algorithmVersion": {
+            "$ref": "#/components/schemas/RuleVersion",
+            "default": "wellness-v1"
+          },
+          "calculatedOn": {
+            "type": "string",
+            "format": "date",
+            "title": "Calculatedon"
+          },
+          "bmi": {
+            "type": "number",
+            "title": "Bmi"
+          },
+          "bmiCategory": {
+            "$ref": "#/components/schemas/BmiCategory"
+          },
+          "restingKcal": {
+            "type": "integer",
+            "title": "Restingkcal"
+          },
+          "maintenanceKcal": {
+            "type": "integer",
+            "title": "Maintenancekcal"
+          },
+          "suggestedKcal": {
+            "type": "integer",
+            "title": "Suggestedkcal"
+          },
+          "predictedGoalDate": {
+            "type": "string",
+            "format": "date",
+            "title": "Predictedgoaldate"
+          },
+          "weeklyChangeKg": {
+            "type": "number",
+            "title": "Weeklychangekg"
+          },
+          "projection": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectionPoint"
+            },
+            "type": "array",
+            "title": "Projection"
+          },
+          "assumptions": {
+            "items": {
+              "$ref": "#/components/schemas/CalculationAssumption"
+            },
+            "type": "array",
+            "title": "Assumptions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "calculatedOn",
+          "bmi",
+          "bmiCategory",
+          "restingKcal",
+          "maintenanceKcal",
+          "suggestedKcal",
+          "predictedGoalDate",
+          "weeklyChangeKg",
+          "projection",
+          "assumptions"
+        ],
+        "title": "Calculation"
+      },
+      "CalculationAssumption": {
+        "type": "string",
+        "enum": [
+          "legacy_energy",
+          "resting_energy",
+          "demo_energy_budget",
+          "linear_projection",
+          "adult_scope"
+        ],
+        "title": "CalculationAssumption"
+      },
+      "ChannelCreate": {
+        "properties": {
+          "merchant_payment_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Merchant Payment Id"
+          },
+          "amount_minor": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Amount Minor"
+          },
+          "currency": {
+            "$ref": "#/components/schemas/Currency"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "merchant_payment_id",
+          "amount_minor",
+          "currency"
+        ],
+        "title": "ChannelCreate"
+      },
+      "ChannelPayment": {
+        "properties": {
+          "merchant_payment_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Merchant Payment Id"
+          },
+          "amount_minor": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Amount Minor"
+          },
+          "currency": {
+            "$ref": "#/components/schemas/Currency"
+          },
+          "transaction_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Transaction Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PaymentStatus"
+          },
+          "checkout_url": {
+            "type": "string",
+            "title": "Checkout Url"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "merchant_payment_id",
+          "amount_minor",
+          "currency",
+          "transaction_id",
+          "status",
+          "checkout_url",
+          "expires_at"
+        ],
+        "title": "ChannelPayment"
+      },
+      "CheckoutConfirm": {
+        "properties": {
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "succeeded",
+              "failed"
+            ],
+            "title": "Outcome",
+            "default": "succeeded"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CheckoutConfirm"
+      },
+      "CreateInput": {
+        "properties": {
+          "sourceAssessmentId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourceassessmentid"
+          },
+          "startNew": {
+            "type": "boolean",
+            "title": "Startnew",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CreateInput"
+      },
+      "Currency": {
+        "type": "string",
+        "enum": [
+          "CNY"
+        ],
+        "title": "Currency"
+      },
+      "DailyActivity": {
+        "type": "string",
+        "enum": [
+          "seated",
+          "mixed",
+          "on_feet"
+        ],
+        "title": "DailyActivity"
+      },
+      "Energy": {
+        "type": "string",
+        "enum": [
+          "low_energy",
+          "afternoon_dip",
+          "steady"
+        ],
+        "title": "Energy"
+      },
+      "Experience": {
+        "type": "string",
+        "enum": [
+          "beginner",
+          "returning",
+          "regular"
+        ],
+        "title": "Experience"
+      },
+      "FoodHabit": {
+        "type": "string",
+        "enum": [
+          "late_snacks",
+          "sweet_drinks",
+          "sweets",
+          "none"
+        ],
+        "title": "FoodHabit"
+      },
+      "FreeResult": {
+        "properties": {
+          "planPreview": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlanPreview"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "access": {
+            "type": "string",
+            "const": "free",
+            "title": "Access",
+            "default": "free"
+          },
+          "assessmentId": {
+            "type": "string",
+            "title": "Assessmentid"
+          },
+          "bmi": {
+            "type": "number",
+            "title": "Bmi"
+          },
+          "bmiCategory": {
+            "$ref": "#/components/schemas/BmiCategory"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/ResultSummary"
+          },
+          "lockedFeatures": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Lockedfeatures"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "assessmentId",
+          "bmi",
+          "bmiCategory",
+          "summary"
+        ],
+        "title": "FreeResult"
+      },
+      "Goal": {
+        "type": "string",
+        "enum": [
+          "lose",
+          "maintain",
+          "gain"
+        ],
+        "title": "Goal"
+      },
+      "Guidance": {
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Revision",
+            "default": 0
+          },
+          "status": {
+            "$ref": "#/components/schemas/GuidanceStatus"
+          },
+          "rulesVersion": {
+            "$ref": "#/components/schemas/RuleVersion",
+            "default": "plan-guidance-v3"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "focus": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlanFocus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "effortScore": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 2.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effortscore"
+          },
+          "effortConfidence": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effortconfidence"
+          },
+          "failureCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failurecode"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "Guidance"
+      },
+      "GuidanceStatus": {
+        "type": "string",
+        "enum": [
+          "ready",
+          "uncertain",
+          "unavailable",
+          "disabled"
+        ],
+        "title": "GuidanceStatus"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "ready"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "HealthResponse"
+      },
+      "Limitation": {
+        "type": "string",
+        "enum": [
+          "back",
+          "knees",
+          "none"
+        ],
+        "title": "Limitation"
+      },
+      "MealRhythm": {
+        "type": "string",
+        "enum": [
+          "regular_meals",
+          "skipped_meals",
+          "irregular_meals"
+        ],
+        "title": "MealRhythm"
+      },
+      "MemberResult": {
+        "properties": {
+          "planPreview": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlanPreview"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "access": {
+            "type": "string",
+            "const": "member",
+            "title": "Access",
+            "default": "member"
+          },
+          "assessmentId": {
+            "type": "string",
+            "title": "Assessmentid"
+          },
+          "bmi": {
+            "type": "number",
+            "title": "Bmi"
+          },
+          "bmiCategory": {
+            "$ref": "#/components/schemas/BmiCategory"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/ResultSummary"
+          },
+          "calculation": {
+            "$ref": "#/components/schemas/Calculation"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "assessmentId",
+          "bmi",
+          "bmiCategory",
+          "summary",
+          "calculation"
+        ],
+        "title": "MemberResult"
+      },
+      "NextAction": {
+        "type": "string",
+        "enum": [
+          "wait",
+          "open_checkout",
+          "none"
+        ],
+        "title": "NextAction"
+      },
+      "PayInput": {
+        "properties": {
+          "planId": {
+            "$ref": "#/components/schemas/PlanId",
+            "default": "wellnest-demo"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PayInput"
+      },
+      "PaymentStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "succeeded",
+          "failed",
+          "closed"
+        ],
+        "title": "PaymentStatus"
+      },
+      "PaymentView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "planId": {
+            "$ref": "#/components/schemas/PlanId"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PaymentStatus"
+          },
+          "amountMinor": {
+            "type": "integer",
+            "title": "Amountminor"
+          },
+          "currency": {
+            "$ref": "#/components/schemas/Currency"
+          },
+          "checkoutUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checkouturl"
+          },
+          "nextAction": {
+            "$ref": "#/components/schemas/NextAction"
+          },
+          "simulated": {
+            "type": "boolean",
+            "const": true,
+            "title": "Simulated",
+            "default": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "planId",
+          "status",
+          "amountMinor",
+          "currency",
+          "checkoutUrl",
+          "nextAction",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "PaymentView"
+      },
+      "PlanCard": {
+        "properties": {
+          "topic": {
+            "$ref": "#/components/schemas/PlanTopic"
+          },
+          "title": {
+            "$ref": "#/components/schemas/PlanMessage"
+          },
+          "reason": {
+            "items": {
+              "$ref": "#/components/schemas/PlanMessage"
+            },
+            "type": "array",
+            "title": "Reason"
+          },
+          "action": {
+            "items": {
+              "$ref": "#/components/schemas/PlanMessage"
+            },
+            "type": "array",
+            "title": "Action"
+          },
+          "sourceFields": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sourcefields"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "topic",
+          "title",
+          "reason",
+          "action",
+          "sourceFields"
+        ],
+        "title": "PlanCard"
+      },
+      "PlanCode": {
+        "type": "string",
+        "enum": [
+          "movement_title",
+          "recovery_title",
+          "meals_title",
+          "consistency_title",
+          "experience",
+          "activity",
+          "seated",
+          "on_feet",
+          "movement_break",
+          "observe_activity",
+          "familiar_activity",
+          "gentle_movement",
+          "familiar_strength",
+          "seek_advice",
+          "limitation_boundary",
+          "sleep_energy",
+          "record_sleep",
+          "keep_sleep",
+          "meal_habits",
+          "protect_meal",
+          "unsweetened_drink",
+          "record_snack",
+          "record_sweets",
+          "keep_meals",
+          "barrier",
+          "pair_action",
+          "record_action",
+          "try_easiest",
+          "review_routine",
+          "schedule_action",
+          "preference"
+        ],
+        "title": "PlanCode"
+      },
+      "PlanFocus": {
+        "type": "string",
+        "enum": [
+          "movement_habit",
+          "meal_routine",
+          "consistency",
+          "insufficient_context"
+        ],
+        "title": "PlanFocus"
+      },
+      "PlanId": {
+        "type": "string",
+        "enum": [
+          "wellnest-demo"
+        ],
+        "title": "PlanId"
+      },
+      "PlanMessage": {
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/PlanCode"
+          },
+          "params": {
+            "$ref": "#/components/schemas/PlanParams"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "params"
+        ],
+        "title": "PlanMessage"
+      },
+      "PlanParams": {
+        "properties": {
+          "experience": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Experience"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "activity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Activity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sleep": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Sleep"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "energy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Energy"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mealRhythm": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MealRhythm"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "foodHabits": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/FoodHabit"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Foodhabits"
+          },
+          "barrier": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Barrier"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "timeWindow": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimeWindow"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "limitations": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Limitation"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limitations"
+          },
+          "preference": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SecondaryGoal"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PlanParams"
+      },
+      "PlanPreview": {
+        "properties": {
+          "formatVersion": {
+            "type": "integer",
+            "const": 2,
+            "title": "Formatversion",
+            "default": 2
+          },
+          "rulesVersion": {
+            "$ref": "#/components/schemas/PlanRuleVersion",
+            "default": "lifestyle-plan-v1"
+          },
+          "cards": {
+            "items": {
+              "$ref": "#/components/schemas/PlanCard"
+            },
+            "type": "array",
+            "title": "Cards"
+          },
+          "preferences": {
+            "items": {
+              "$ref": "#/components/schemas/PlanMessage"
+            },
+            "type": "array",
+            "title": "Preferences"
+          },
+          "boundaries": {
+            "items": {
+              "$ref": "#/components/schemas/PlanMessage"
+            },
+            "type": "array",
+            "title": "Boundaries"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "cards",
+          "preferences",
+          "boundaries"
+        ],
+        "title": "PlanPreview"
+      },
+      "PlanRuleVersion": {
+        "type": "string",
+        "enum": [
+          "lifestyle-plan-v1"
+        ],
+        "title": "PlanRuleVersion"
+      },
+      "PlanTopic": {
+        "type": "string",
+        "enum": [
+          "movement",
+          "recovery",
+          "meals",
+          "consistency"
+        ],
+        "title": "PlanTopic"
+      },
+      "ProjectionPoint": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "weightKg": {
+            "type": "number",
+            "title": "Weightkg"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "date",
+          "weightKg"
+        ],
+        "title": "ProjectionPoint"
+      },
+      "ResultSummary": {
+        "type": "string",
+        "enum": [
+          "personal_start"
+        ],
+        "title": "ResultSummary"
+      },
+      "RuleVersion": {
+        "type": "string",
+        "enum": [
+          "wellness-v1",
+          "wellness-v2",
+          "plan-guidance-v1",
+          "plan-guidance-v2",
+          "plan-guidance-v3"
+        ],
+        "title": "RuleVersion"
+      },
+      "SecondaryGoal": {
+        "type": "string",
+        "enum": [
+          "energy",
+          "mobility",
+          "routine",
+          "strength"
+        ],
+        "title": "SecondaryGoal"
+      },
+      "SessionCreated": {
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "title": "Sessionid"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "sessionId"
+        ],
+        "title": "SessionCreated"
+      },
+      "SessionView": {
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "title": "Sessionid"
+          },
+          "subscriptionStatus": {
+            "$ref": "#/components/schemas/SubscriptionStatus"
+          },
+          "assessment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssessmentView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "sessionId",
+          "subscriptionStatus",
+          "assessment"
+        ],
+        "title": "SessionView"
+      },
+      "Sex": {
+        "type": "string",
+        "enum": [
+          "female",
+          "male"
+        ],
+        "title": "Sex"
+      },
+      "Sleep": {
+        "type": "string",
+        "enum": [
+          "short",
+          "variable",
+          "rested"
+        ],
+        "title": "Sleep"
+      },
+      "Step": {
+        "type": "string",
+        "enum": [
+          "welcome",
+          "sex",
+          "goal",
+          "age",
+          "height",
+          "weight",
+          "target",
+          "activity",
+          "review",
+          "result",
+          "goal_feedback",
+          "activity_feedback",
+          "target_feedback",
+          "secondary_goals",
+          "experience",
+          "daily_activity",
+          "limitations",
+          "sleep",
+          "energy",
+          "meal_rhythm",
+          "food_habits",
+          "barrier",
+          "time_window",
+          "movement_feedback",
+          "habits_feedback"
+        ],
+        "title": "Step"
+      },
+      "SubmitInput": {
+        "properties": {
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expectedversion"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expectedVersion"
+        ],
+        "title": "SubmitInput"
+      },
+      "Submitted": {
+        "properties": {
+          "resultId": {
+            "type": "string",
+            "title": "Resultid"
+          },
+          "status": {
+            "type": "string",
+            "const": "completed",
+            "title": "Status"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "resultId",
+          "status",
+          "version"
+        ],
+        "title": "Submitted"
+      },
+      "SubscriptionStatus": {
+        "type": "string",
+        "enum": [
+          "inactive",
+          "active"
+        ],
+        "title": "SubscriptionStatus"
+      },
+      "TimeWindow": {
+        "type": "string",
+        "enum": [
+          "morning",
+          "midday",
+          "evening",
+          "varies"
+        ],
+        "title": "TimeWindow"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

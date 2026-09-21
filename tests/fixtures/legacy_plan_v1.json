@@ -1,0 +1,53 @@
+{
+  "rules_version": "lifestyle-plan-v1",
+  "cards": [
+    {
+      "topic": "movement",
+      "title": "找到合适的活动起点",
+      "reason": "你正在建立运动习惯，每周运动 1–2 次，而日常大部分时间坐着",
+      "action": "在一次工作间歇起身走动，把日常活动与正式运动分开安排。",
+      "source_fields": [
+        "secondaryGoals",
+        "experience",
+        "activity",
+        "dailyActivity",
+        "limitations"
+      ]
+    },
+    {
+      "topic": "recovery",
+      "title": "给恢复留出位置",
+      "reason": "你说自己睡眠时间不固定，同时午后容易犯困",
+      "action": "先记录入睡、起床时间和白天感受，找一个容易保持的作息锚点。",
+      "source_fields": [
+        "sleep",
+        "energy"
+      ]
+    },
+    {
+      "topic": "meals",
+      "title": "从一件饮食小事开始",
+      "reason": "你用餐时间不固定；常喝含糖饮料",
+      "action": "先为最容易被打乱的一餐留出时间，观察怎样安排更容易做到。",
+      "source_fields": [
+        "mealRhythm",
+        "foodHabits"
+      ]
+    },
+    {
+      "topic": "consistency",
+      "title": "让行动容易发生",
+      "reason": "你最担心没有时间",
+      "action": "把第一件小事放在晚间，先确认它能融入生活。",
+      "source_fields": [
+        "barrier",
+        "timeWindow"
+      ]
+    }
+  ],
+  "preferences": [
+    "日常更有精神",
+    "建立稳定习惯"
+  ],
+  "boundaries": []
+}

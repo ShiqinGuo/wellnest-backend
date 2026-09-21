@@ -1,0 +1,76 @@
+name: wellnest-payments
+
+x-backend: &backend
+  build:
+    context: .
+    dockerfile: Dockerfile.payments
+  env_file: .env.payments
+  environment:
+    WELLNEST_DATABASE_URL: postgresql://wellnest:${PAYMENT_DB_PASSWORD}@postgres:5432/wellnest_test
+    WELLNEST_PAYMENT_BROKER_URL: amqp://wellnest:${PAYMENT_MQ_PASSWORD}@rabbitmq:5672//
+    WELLNEST_PAYMENT_PROVIDER_URL: http://api:8000
+    WELLNEST_PAYMENT_MERCHANT_URL: http://api:8000
+    WELLNEST_PAYMENT_PUBLIC_URL: http://127.0.0.1:18090
+    WELLNEST_SECURE_COOKIES: "false"
+    WELLNEST_ORIGIN: ${WELLNEST_ORIGIN:-http://127.0.0.1:5174}
+  restart: unless-stopped
+
+services:
+  postgres:
+    image: postgres:18
+    ports: ["127.0.0.1:55449:5432"]
+    environment:
+      POSTGRES_USER: wellnest
+      POSTGRES_PASSWORD: ${PAYMENT_DB_PASSWORD:?Generate .env.payments first}
+      POSTGRES_DB: wellnest_test
+    volumes: [payment-pg:/var/lib/postgresql]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U wellnest -d wellnest_test]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  rabbitmq:
+    image: rabbitmq:4
+    ports: ["127.0.0.1:5679:5672"]
+    environment:
+      RABBITMQ_DEFAULT_USER: wellnest
+      RABBITMQ_DEFAULT_PASS: ${PAYMENT_MQ_PASSWORD:?Generate .env.payments first}
+    volumes: [payment-mq:/var/lib/rabbitmq]
+    healthcheck:
+      test: [CMD, rabbitmq-diagnostics, -q, ping]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  migrate:
+    <<: *backend
+    command: [alembic, upgrade, head]
+    restart: "no"
+    depends_on:
+      postgres: {condition: service_healthy}
+  api:
+    <<: *backend
+    ports: ["127.0.0.1:18090:8000"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  worker:
+    <<: *backend
+    command: [celery, -A, "app.payment_tasks:celery_app", worker, --loglevel=INFO, --concurrency=2, --without-gossip, --without-mingle]
+    depends_on:
+      api: {condition: service_healthy}
+      rabbitmq: {condition: service_healthy}
+  scheduler:
+    <<: *backend
+    command: [python, -m, app.payment_scheduler]
+    depends_on:
+      api: {condition: service_healthy}
+      rabbitmq: {condition: service_healthy}
+
+volumes:
+  payment-pg:
+  payment-mq:
+

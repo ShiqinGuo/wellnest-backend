@@ -1,0 +1,8 @@
+{
+  "version": "0.2.0",
+  "sha256": {
+    "contract.ts": "b47c40404262b92aab877567dbaf55abfdec6a619ad99aa99af2f7f60bbdd95d",
+    "openapi.json": "9cc6d7353367542b152e4daa737de331348d082048f11533f31366b1210d5537",
+    "plan-fixtures.json": "8f2910cfac5fe20e62703df43060d70e6baf4b9f1890e89381301fad917ff3da"
+  }
+}

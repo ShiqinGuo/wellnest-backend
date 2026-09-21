@@ -1,0 +1,1 @@
+Split from the local Wellnest application. Existing assessment and bilingual rule contracts were preserved. Payment workflow, queue infrastructure, API contract exports and repository CI were added in this delivery. The original repository remains a historical deployment source.
