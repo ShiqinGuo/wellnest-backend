@@ -1,6 +1,8 @@
 """Cloudflare adapters; payment services remain independent of the Worker SDK."""
 
+import json
 import logging
+from time import perf_counter
 
 from pydantic import ValidationError
 
@@ -11,6 +13,7 @@ from app.providers.worker_http import ServiceBindingTransport
 from app.runtime_database import scoped_database
 from app.services.payment_delivery import PaymentDelivery
 from app.services.payment_workflow import PaymentWorkflow
+from app.timing import RequestTiming, current_timing
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +62,9 @@ async def consume_batch(batch, env) -> None:
             message.retry()
             continue
         service = delivery(env)
+        timing = RequestTiming()
+        timing_token = current_timing.set(timing)
+        started = perf_counter()
         try:
             delay = await service.consume(payload)
             if delay is None:
@@ -72,5 +78,19 @@ async def consume_batch(batch, env) -> None:
             )
             message.retry(delaySeconds=service.settings.retry_base)
         finally:
-            await service.db.release()
+            try:
+                await service.db.release()
+            finally:
+                print(
+                    json.dumps(
+                        {
+                            "event": "queue_timing",
+                            "event_id": str(payload.event_id),
+                            "duration_ms": round((perf_counter() - started) * 1000, 1),
+                            "durations_ms": dict(timing.durations),
+                            "counts": dict(timing.counts),
+                        }
+                    )
+                )
+                current_timing.reset(timing_token)
     await safe_relay(env)
