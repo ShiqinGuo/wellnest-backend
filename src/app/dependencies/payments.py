@@ -18,7 +18,7 @@ async def provider_auth(settings: PaymentSettingsDep, authorization: str = Heade
     if not hmac.compare_digest(
         authorization.encode(), f"Bearer {settings.provider_key.get_secret_value()}".encode()
     ):
-        raise AppError(ErrorCode.invalid_provider_key, "Invalid provider credentials", 401)
+        raise AppError(ErrorCode.invalid_provider_key)
 
 
 async def mock_provider(db: DatabaseDep, settings: PaymentSettingsDep) -> MockProviderService:

@@ -3,10 +3,10 @@ from uuid import uuid4
 
 from opentelemetry import trace
 from starlette.datastructures import URL, Headers, MutableHeaders
-from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from app.errors import ErrorCode
+from app.errors import AppError, ErrorCode
+from app.exception_handlers import error_response
 from app.settings import runtime_value
 
 logger = logging.getLogger(__name__)
@@ -43,16 +43,7 @@ class RequestPolicy:
             await send(message)
 
         if scope["method"] not in {"GET", "HEAD", "OPTIONS"} and origin and origin != allowed:
-            response = JSONResponse(
-                {
-                    "error": {
-                        "code": "ORIGIN_REJECTED",
-                        "message": "请求来源无效",
-                        "requestId": request_id,
-                    }
-                },
-                status_code=403,
-            )
+            response = error_response(AppError(ErrorCode.origin_rejected), request_id)
             return await response(scope, receive, send_with_headers)
         try:
             await self.app(scope, receive, send_with_headers)
@@ -60,15 +51,5 @@ class RequestPolicy:
             logger.exception("Unhandled request failure")
             if response_started:
                 raise
-            response = JSONResponse(
-                {
-                    "error": {
-                        "code": ErrorCode.internal_error,
-                        "message": "Internal server error",
-                        "details": {},
-                        "requestId": request_id,
-                    }
-                },
-                status_code=500,
-            )
+            response = error_response(AppError(ErrorCode.internal_error), request_id)
             await response(scope, receive, send_with_headers)

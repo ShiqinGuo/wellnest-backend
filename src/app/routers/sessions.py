@@ -1,3 +1,5 @@
+from http import HTTPStatus
+
 from fastapi import APIRouter, Request, Response
 
 from app.dependencies.auth import SESSION_COOKIE, IdentityDep
@@ -10,7 +12,7 @@ from app.settings import runtime_value
 router = APIRouter(prefix="/api", tags=["sessions"])
 
 
-@router.post("/sessions", status_code=201)
+@router.post("/sessions", status_code=HTTPStatus.CREATED)
 async def start_session(
     request: Request, response: Response, service: SessionServiceDep
 ) -> SessionCreated:
@@ -21,9 +23,8 @@ async def start_session(
             created.token,
             max_age=SESSION_MAX_AGE,
             httponly=True,
-            secure=runtime_value(
-                request.scope.get("env"), "WELLNEST_SECURE_COOKIES", "true"
-            ) == "true",
+            secure=runtime_value(request.scope.get("env"), "WELLNEST_SECURE_COOKIES", "true")
+            == "true",
             samesite="lax",
         )
     return SessionCreated(session_id=str(created.session_id))

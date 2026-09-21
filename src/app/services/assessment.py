@@ -37,16 +37,14 @@ class AssessmentService:
     ) -> AssessmentData:
         assessment = await self.repository.get(user_id, assessment_id, lock=lock)
         if assessment is None:
-            raise AppError(ErrorCode.not_found, "未找到这份测评", 404)
+            raise AppError(ErrorCode.not_found)
         return assessment
 
     @staticmethod
     def check_version(assessment: AssessmentData, expected: int) -> None:
         if assessment.version != expected:
             raise AppError(
-                ErrorCode.version_conflict,
-                "测评已在其他页面更新，请载入最新数据再继续",
-                details={"currentVersion": assessment.version},
+                ErrorCode.version_conflict, details={"currentVersion": assessment.version}
             )
 
     async def create(
@@ -61,7 +59,7 @@ class AssessmentService:
                 try:
                     source_id = UUID(command.source_assessment_id)
                 except ValueError as exc:
-                    raise AppError(ErrorCode.invalid_source, "来源测评格式无效", 422) from exc
+                    raise AppError(ErrorCode.invalid_source) from exc
                 answers = (await self.get(user_id, source_id, lock=True)).answers
             return await self.repository.create(user_id, answers)
 
@@ -78,10 +76,10 @@ class AssessmentService:
             AssessmentStateMachine.transition(current.status, AssessmentEvent.edit)
             combined = current.answers.model_dump() | command.answers.model_dump(exclude_unset=True)
             if current.flow_version not in FLOW_STEPS:
-                raise AppError(ErrorCode.unsupported_flow, "此问卷版本暂不支持编辑", 409)
+                raise AppError(ErrorCode.unsupported_flow)
             if combined["barrier"] != Barrier.time:
                 if command.answers.time_window is not None:
-                    raise AppError(ErrorCode.invalid_answers, "当前回答不适用时间追问", 422)
+                    raise AppError(ErrorCode.invalid_answers)
                 combined["time_window"] = None
             if current.flow_version != FlowVersion.lifestyle:
                 from app.domain.flow import FIELD_FOR_STEP, GUIDED_STEPS, LIFESTYLE_STEPS
@@ -92,15 +90,13 @@ class AssessmentService:
                     if s not in GUIDED_STEPS and s in FIELD_FOR_STEP
                 }
                 if new_fields & command.answers.model_fields_set:
-                    raise AppError(
-                        ErrorCode.invalid_answers, "旧版问卷不支持新增画像字段，请重新测评", 422
-                    )
+                    raise AppError(ErrorCode.invalid_answers)
             if combined["goal"] == Goal.maintain:
                 combined["target_weight_kg"] = combined["weight_kg"]
             try:
                 answers = Answers.model_validate(combined)
             except ValidationError as exc:
-                raise AppError(ErrorCode.invalid_answers, str(exc.errors()[0]["msg"]), 422) from exc
+                raise AppError(ErrorCode.invalid_answers) from exc
             step = (
                 AssessmentNavigation.transition(
                     current.resume_step_id, command.resume_step_id, answers, current.flow_version
@@ -131,13 +127,11 @@ class AssessmentService:
         calculation = None
         if initial.status != AssessmentStatus.completed:
             if initial.flow_version not in FLOW_STEPS:
-                raise AppError(ErrorCode.unsupported_flow, "此问卷版本暂不支持提交", 409)
+                raise AppError(ErrorCode.unsupported_flow)
             if initial.answers.missing(initial.flow_version):
                 raise AppError(
                     ErrorCode.incomplete_assessment,
-                    "还有必填信息未完成",
-                    422,
-                    {
+                    details={
                         "missingFields": [
                             to_camel(f) for f in initial.answers.missing(initial.flow_version)
                         ]
@@ -148,7 +142,7 @@ class AssessmentService:
                 calculation = assess(complete, today=datetime.now(UTC).date())
                 calculation.plan_preview = build_plan(complete)
             except ValueError as exc:
-                raise AppError(ErrorCode.unsupported_estimate, str(exc), 422) from exc
+                raise AppError(ErrorCode.unsupported_estimate) from exc
             # No transaction or row lock is held across external inference.
             await self.commands.release_connection()
             calculation.guidance = await self.jev.judge(complete)
@@ -171,7 +165,7 @@ class AssessmentService:
     async def result(self, user_id: UUID, assessment_id: UUID) -> ResultData:
         result = await self.repository.result(user_id, assessment_id)
         if result is None:
-            raise AppError(ErrorCode.result_not_found, "测评结果尚未生成或不可访问", 404)
+            raise AppError(ErrorCode.result_not_found)
         latest = (
             await GuidanceRepository(self.repository.conn).latest(assessment_id)
             if result.is_member

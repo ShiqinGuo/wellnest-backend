@@ -35,9 +35,9 @@ class PaymentService:
     async def create(self, user_id: UUID, key: str, command: PayCommand) -> PaymentData:
         async def operation() -> PaymentData:
             if not await self.assessments.has_completed(user_id):
-                raise AppError(ErrorCode.assessment_required, "Complete an assessment first")
+                raise AppError(ErrorCode.assessment_required)
             if await self.repository.is_member(user_id):
-                raise AppError(ErrorCode.already_subscribed, "Membership is already active")
+                raise AppError(ErrorCode.already_subscribed)
             row = await self.repository.pending(user_id, command.plan_id)
             if row is None:
                 row = await self.repository.create(
@@ -57,14 +57,14 @@ class PaymentService:
     async def get(self, user_id: UUID, payment_id: UUID) -> PaymentData:
         row = await self.repository.get(payment_id, user_id)
         if row is None:
-            raise AppError(ErrorCode.not_found, "Payment not found", 404)
+            raise AppError(ErrorCode.not_found)
         return self.repository.data(row)
 
     async def refresh(self, user_id: UUID, payment_id: UUID) -> None:
         async with self.repository.conn.transaction():
             row = await self.repository.get(payment_id, user_id, lock=True)
             if row is None:
-                raise AppError(ErrorCode.not_found, "Payment not found", 404)
+                raise AppError(ErrorCode.not_found)
             scheduled = await self.repository.schedule_refresh(
                 payment_id, self.settings.refresh_interval
             )
@@ -75,7 +75,7 @@ class PaymentService:
         """Caller owns the transaction, including inbox/outbox completion."""
         identity = await self.repository.get(payment_id)
         if identity is None:
-            raise AppError(ErrorCode.not_found, "Payment not found", 404)
+            raise AppError(ErrorCode.not_found)
         # Consistent lock ordering: user first, then payment; create uses the same user lock.
         await CommandRepository(self.repository.conn).lock_user(identity["user_id"])
         row = await self.repository.get(payment_id, lock=True)
@@ -88,9 +88,7 @@ class PaymentService:
                 and row["provider_transaction_id"] != result.transaction_id
             )
         ):
-            raise AppError(
-                ErrorCode.payment_mismatch, "Channel payment identity or amount mismatch"
-            )
+            raise AppError(ErrorCode.payment_mismatch)
         current = PaymentStatus(row["status"])
         if result.status == PaymentStatus.pending:
             target = current  # An old pending observation cannot regress a terminal payment.

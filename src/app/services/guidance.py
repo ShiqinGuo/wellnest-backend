@@ -31,9 +31,9 @@ class GuidanceService:
         # Authorization is checked even on an idempotent replay.
         result = await self.assessments.result(user_id, assessment_id)
         if result is None:
-            raise AppError(ErrorCode.result_not_found, "评估不存在", 404)
+            raise AppError(ErrorCode.result_not_found)
         if not result.is_member:
-            raise AppError(ErrorCode.membership_required, "解锁后可查看行动建议", 403)
+            raise AppError(ErrorCode.membership_required)
         replay = await self.commands.replay(user_id, name, key, command, Guidance)
         if replay:
             return replay
@@ -41,9 +41,9 @@ class GuidanceService:
         async def current() -> Guidance:
             guidance = await self.repository.latest(assessment_id) or result.calculation.guidance
             if guidance is None:
-                raise AppError(ErrorCode.guidance_not_retryable, "此历史评估没有行动建议")
+                raise AppError(ErrorCode.guidance_not_retryable)
             if guidance.revision != command.expected_version:
-                raise AppError(ErrorCode.version_conflict, "行动建议已更新，请载入最新结果")
+                raise AppError(ErrorCode.version_conflict)
             GuidanceStateMachine.check(guidance.status, GuidanceEvent.retry)
             return guidance
 

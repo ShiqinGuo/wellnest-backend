@@ -99,13 +99,11 @@ class AssessmentNavigation:
     ) -> Step:
         steps = applicable_steps(answers, flow_version)
         if current not in FLOW_STEPS[flow_version] or target not in steps:
-            raise AppError(ErrorCode.step_unavailable, "请先完成测评，再查看结果", 422)
+            raise AppError(ErrorCode.step_unavailable)
         for prior in steps[: steps.index(target)]:
             field = FIELD_FOR_STEP.get(prior)
             if field and getattr(answers, field) is None:
-                raise AppError(
-                    ErrorCode.step_unavailable, "请先完成前面的必填信息", 422, {"stepId": prior}
-                )
+                raise AppError(ErrorCode.step_unavailable, details={"stepId": prior})
         return target
 
     @staticmethod

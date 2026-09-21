@@ -1,5 +1,6 @@
 import asyncio
 import math
+from http import HTTPStatus
 from typing import Annotated, Literal, Protocol
 
 from pydantic import BaseModel, Field, ValidationError, model_validator
@@ -160,7 +161,7 @@ class HttpxTransport:
                 )
         except httpx.HTTPError:
             raise JevTransportError("transport_error") from None
-        if response.status_code != 200:
+        if response.status_code != HTTPStatus.OK:
             raise JevTransportError(f"upstream_{response.status_code}")
         return response.text
 
@@ -182,7 +183,7 @@ class WorkersTransport:
                     "Content-Type": "application/json",
                 },
             )
-            if response.status != 200:
+            if response.status != HTTPStatus.OK:
                 raise JevTransportError(f"upstream_{response.status}")
             return await response.text()
         except OSError:

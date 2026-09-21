@@ -45,21 +45,21 @@ class MockProviderService:
                 self.settings.checkout_lifetime,
             )
             if row["amount_minor"] != command.amount_minor or row["currency"] != command.currency:
-                raise AppError(ErrorCode.payment_mismatch, "Merchant reference already used", 409)
+                raise AppError(ErrorCode.payment_mismatch)
             return self.view(await self.expire(row))
 
     async def query(self, payment_id: UUID) -> ChannelPayment:
         async with self.repository.conn.transaction():
             row = await self.repository.by_merchant(payment_id)
             if row is None:
-                raise AppError(ErrorCode.not_found, "Channel payment not found", 404)
+                raise AppError(ErrorCode.not_found)
             return self.view(await self.expire(row))
 
     async def checkout(self, token: str, command: CheckoutConfirm | None = None) -> ChannelPayment:
         async with self.repository.conn.transaction():
             row = await self.repository.by_token(token)
             if row is None:
-                raise AppError(ErrorCode.not_found, "Checkout not found", 404)
+                raise AppError(ErrorCode.not_found)
             row = await self.expire(row)
             if command and row["status"] != PaymentStatus.closed:
                 event = (

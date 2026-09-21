@@ -181,3 +181,6 @@ Cloudflare 原生 Traces 仍显示平台调用；Python SDK span 存在 Logs 中
 应用日志与 span 均通过 Python logging 输出结构化 JSON，包含 level/message 和 trace_id/span_id。异常记录类型和调用栈位置，不输出异常消息、SQL 参数、局部变量或请求凭据；未处理的请求异常返回统一 INTERNAL_ERROR。
 
 迁移 `g50922_message_headers` 回填通用 headers 并删除专用 traceparent 列，无旧消息兼容层。代码和数据库需配套发布；回滚时也需配套 downgrade。已执行的历史迁移保持不变。
+
+
+错误契约集中定义于 `app/errors.py`：每个 ErrorCode 固定 wire code、HTTPStatus 与英文默认 message。业务抛出 `AppError(ErrorCode.version_conflict, details={"currentVersion": version})`，不覆盖状态或文案；所有应用错误经统一响应构造器返回。用户可见的中英文提示仍由前端根据 code 翻译。参数校验 issues 仅包含 field 和机器可读 code，不返回原始输入或异常文本。成功响应及上游 HTTP 状态判断使用标准库 HTTPStatus。

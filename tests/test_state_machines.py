@@ -10,7 +10,7 @@ from app.domain.enums import (
 )
 from app.domain.flow import AssessmentNavigation
 from app.domain.state_machine import AssessmentStateMachine, SubscriptionStateMachine
-from app.errors import AppError
+from app.errors import AppError, ErrorCode
 
 
 @pytest.mark.parametrize(
@@ -26,8 +26,9 @@ def test_assessment_transitions(state, event, target):
 
 
 def test_completed_assessment_rejects_edit():
-    with pytest.raises(AppError, match="已完成"):
+    with pytest.raises(AppError) as error:
         AssessmentStateMachine.transition(AssessmentStatus.completed, AssessmentEvent.edit)
+    assert error.value.code == ErrorCode.assessment_completed
 
 
 @pytest.mark.parametrize("state", list(SubscriptionStatus))
@@ -42,8 +43,11 @@ def test_navigation_guards_are_separate_from_lifecycle():
     answers = Answers(sex="female")
     assert AssessmentNavigation.transition(Step.sex, Step.goal, answers) == Step.goal
     assert AssessmentNavigation.transition(Step.goal, Step.sex, answers) == Step.sex
-    with pytest.raises(AppError, match="必填"):
+    with pytest.raises(AppError) as missing:
         AssessmentNavigation.transition(Step.sex, Step.review, answers)
-    with pytest.raises(AppError, match="查看结果"):
+    with pytest.raises(AppError) as unavailable:
         AssessmentNavigation.transition(Step.sex, Step.result, answers)
+    assert missing.value.code == ErrorCode.step_unavailable
+    assert missing.value.details == {"stepId": Step.goal}
+    assert unavailable.value.code == ErrorCode.step_unavailable
     assert AssessmentNavigation.reconcile(Step.review, answers) == Step.goal

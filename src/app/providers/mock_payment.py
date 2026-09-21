@@ -3,6 +3,7 @@
 import hashlib
 import hmac
 import time
+from http import HTTPStatus
 from typing import Protocol
 from uuid import UUID
 
@@ -30,7 +31,7 @@ def verify(body: bytes, timestamp: str, signature: str, settings: PaymentSetting
             signature, sign(body, timestamp, settings.webhook_secret.get_secret_value())
         )
     ):
-        raise AppError(ErrorCode.invalid_signature, "Invalid webhook signature", 401)
+        raise AppError(ErrorCode.invalid_signature)
 
 
 class PaymentGateway(Protocol):
@@ -72,7 +73,7 @@ class MockPaymentGateway:
                 self.settings.provider_url + f"/api/mock-provider/payments/{merchant_payment_id}",
                 headers=self.headers(),
             )
-            if response.status_code == 404:
+            if response.status_code == HTTPStatus.NOT_FOUND:
                 return None
             response.raise_for_status()
             return ChannelPayment.model_validate(response.json())

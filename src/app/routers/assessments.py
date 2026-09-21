@@ -1,3 +1,4 @@
+from http import HTTPStatus
 from typing import Annotated
 from uuid import UUID
 
@@ -19,7 +20,7 @@ router = APIRouter(prefix="/api/assessments", tags=["assessments"])
 AssessmentId = Annotated[UUID, Path(description="当前会话所属的测评 ID")]
 
 
-@router.post("", status_code=201)
+@router.post("", status_code=HTTPStatus.CREATED)
 async def create(
     payload: CreateInput, key: CommandKeyDep, me: IdentityDep, service: AssessmentServiceDep
 ) -> AssessmentView:

@@ -45,11 +45,11 @@ class PaymentWorkflow:
         fingerprint = hashlib.sha256(payload.encode()).hexdigest()
         async with self.db.transaction():
             if await self.repository.get(notification.merchant_payment_id) is None:
-                raise AppError(ErrorCode.not_found, "Unknown merchant payment", 404)
+                raise AppError(ErrorCode.not_found)
             await self.inbox.insert(notification, fingerprint)
             existing = await self.inbox.get(notification.event_id)
             if existing["fingerprint"] != fingerprint:
-                raise AppError(ErrorCode.payment_conflict, "Event ID reused with different payload")
+                raise AppError(ErrorCode.payment_conflict)
             if existing["status"] == InboxStatus.pending:
                 await self.outbox.enqueue(PaymentTask.process_webhook, notification.event_id)
 

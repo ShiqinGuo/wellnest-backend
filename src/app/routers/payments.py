@@ -1,3 +1,4 @@
+from http import HTTPStatus
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, Request
@@ -23,7 +24,7 @@ notification_schema = ChannelNotification.model_json_schema(
 notification_schema.pop("$defs", None)
 
 
-@router.post("/payments", status_code=201)
+@router.post("/payments", status_code=HTTPStatus.CREATED)
 async def create_payment(
     payload: PayInput,
     key: CommandKeyDep,
@@ -38,7 +39,7 @@ async def get_payment(payment_id: UUID, me: IdentityDep, service: PaymentService
     return PaymentView.from_data(await service.get(me.user_id, payment_id))
 
 
-@router.post("/payments/{payment_id}/refresh", status_code=202)
+@router.post("/payments/{payment_id}/refresh", status_code=HTTPStatus.ACCEPTED)
 async def refresh(payment_id: UUID, me: IdentityDep, service: PaymentServiceDep) -> Accepted:
     await service.refresh(me.user_id, payment_id)
     return Accepted()
@@ -64,7 +65,7 @@ async def webhook(
     async for chunk in request.stream():
         chunks.extend(chunk)
         if len(chunks) > settings.max_webhook_bytes:
-            raise AppError(ErrorCode.invalid_signature, "Webhook body too large", 413)
+            raise AppError(ErrorCode.webhook_too_large)
     body = bytes(chunks)
     verify(body, x_payment_timestamp, x_payment_signature, settings)
     from pydantic import ValidationError
@@ -72,12 +73,14 @@ async def webhook(
     try:
         notification = ChannelNotification.model_validate_json(body)
     except ValidationError as exc:
-        raise AppError(ErrorCode.payment_mismatch, "Invalid channel notification", 422) from exc
+        raise AppError(ErrorCode.invalid_notification) from exc
     await service.accept_webhook(notification)
     return Accepted()
 
 
-@router.post("/mock-provider/payments", dependencies=[Depends(provider_auth)], status_code=201)
+@router.post(
+    "/mock-provider/payments", dependencies=[Depends(provider_auth)], status_code=HTTPStatus.CREATED
+)
 async def provider_create(payload: ChannelCreate, service: MockProviderDep) -> ChannelPayment:
     return await service.create(payload)
 

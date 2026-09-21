@@ -1,3 +1,4 @@
+from http import HTTPStatus
 from urllib.parse import urlsplit
 
 from workers import WorkerEntrypoint, asgi
@@ -18,7 +19,7 @@ class Default(WorkerEntrypoint):
         response = await asgi.fetch(app, request, self.env, self.ctx)
         if (
             request.method == "POST"
-            and response.status < 400
+            and response.status < HTTPStatus.BAD_REQUEST
             and urlsplit(request.url).path.startswith(PAYMENT_WRITE_PATHS)
         ):
             self.ctx.waitUntil(safe_relay(self.env))

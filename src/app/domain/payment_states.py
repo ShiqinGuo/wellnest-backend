@@ -29,7 +29,7 @@ class PaymentStateMachine:
     def transition(cls, state: PaymentStatus, event: PaymentEvent) -> PaymentStatus:
         target = cls.targets[event]
         if state not in (PaymentStatus.pending, target):
-            raise AppError(ErrorCode.payment_conflict, "Conflicting payment outcome", 409)
+            raise AppError(ErrorCode.payment_conflict)
         return target
 
 

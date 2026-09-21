@@ -24,7 +24,7 @@ class AssessmentStateMachine:
     def transition(cls, state: AssessmentStatus, event: AssessmentEvent) -> AssessmentStatus:
         target = cls.transitions.get((state, event))
         if target is None:
-            raise AppError(ErrorCode.assessment_completed, "此测评已完成，请创建新的测评")
+            raise AppError(ErrorCode.assessment_completed)
         return target
 
 
@@ -56,7 +56,7 @@ class GuidanceStateMachine:
     @classmethod
     def check(cls, state: GuidanceStatus, event: GuidanceEvent) -> None:
         if event != GuidanceEvent.retry or state not in cls.retryable:
-            raise AppError(ErrorCode.guidance_not_retryable, "当前行动建议无需重试")
+            raise AppError(ErrorCode.guidance_not_retryable)
 
     @classmethod
     def transition(

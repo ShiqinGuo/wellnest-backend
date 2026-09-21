@@ -28,7 +28,7 @@ async def get_command_key(
     ],
 ) -> str:
     if not all(c.isalnum() or c in "-_.:" for c in idempotency_key):
-        raise AppError(ErrorCode.invalid_command_key, "操作标识格式无效", 422)
+        raise AppError(ErrorCode.invalid_command_key)
     return idempotency_key
 
 

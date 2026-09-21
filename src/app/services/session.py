@@ -30,10 +30,10 @@ class SessionService:
 
     async def authenticate(self, token: str | None) -> IdentityData:
         if not token or len(token) > RUNTIME.max_token_length:
-            raise AppError(ErrorCode.session_required, "请先开始测评", 401)
+            raise AppError(ErrorCode.session_required)
         identity = await self.repository.find(digest(token))
         if identity is None:
-            raise AppError(ErrorCode.session_expired, "会话已失效，请重新开始", 401)
+            raise AppError(ErrorCode.session_expired)
         return identity
 
     async def start(self, existing_token: str | None) -> CreatedSessionData:

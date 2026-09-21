@@ -29,7 +29,7 @@ class CommandService:
         if receipt is None:
             return None
         if receipt.fingerprint != fingerprint:
-            raise AppError(ErrorCode.idempotency_conflict, "此操作标识已用于其他内容，请刷新后重试")
+            raise AppError(ErrorCode.idempotency_conflict)
         return self.repository.decode(receipt, result_type)
 
     async def run[T: BaseModel](
@@ -49,9 +49,7 @@ class CommandService:
             receipt = await self.repository.receipt(user_id, command, key)
             if receipt:
                 if receipt.fingerprint != fingerprint:
-                    raise AppError(
-                        ErrorCode.idempotency_conflict, "此操作标识已用于其他内容，请刷新后重试"
-                    )
+                    raise AppError(ErrorCode.idempotency_conflict)
                 return self.repository.decode(receipt, result_type)
             result = await operation()
             await self.repository.record(user_id, command, key, fingerprint, result)
