@@ -1,7 +1,7 @@
 from uuid import UUID
 
-from sqlalchemy import CheckConstraint, ForeignKey, Index, String
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy import CheckConstraint, ForeignKey, Index, String, and_, any_, cast, func, or_
+from sqlalchemy.dialects.postgresql import ARRAY, array
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.domain.enums import (
@@ -64,50 +64,63 @@ class Assessment(TimestampMixin, Base):
 
     __table_args__ = (
         CheckConstraint(
-            "secondary_goals <@ ARRAY['energy','mobility','routine','strength']::varchar[] AND "
-            "cardinality(secondary_goals) BETWEEN 1 AND "
-            "4",
+            and_(
+                secondary_goals.column.contained_by(
+                    cast(array([item.value for item in SecondaryGoal]), ARRAY(String()))
+                ),
+                func.cardinality(secondary_goals).between(1, len(SecondaryGoal)),
+            ),
             name="assessment_secondary_goals",
         ),
         CheckConstraint(
-            "experience IN ('beginner','returning','regular')", name="assessment_experience"
+            experience.in_([item.value for item in Experience]), name="assessment_experience"
         ),
         CheckConstraint(
-            "daily_activity IN ('seated','mixed','on_feet')", name="assessment_daily_activity"
+            daily_activity.in_([item.value for item in DailyActivity]),
+            name="assessment_daily_activity",
         ),
         CheckConstraint(
-            "limitations <@ ARRAY['back','knees','none']::varchar[] AND "
-            "cardinality(limitations) BETWEEN 1 AND "
-            "3 AND "
-            "(NOT ('none' = ANY(limitations)) OR cardinality(limitations) = 1)",
+            and_(
+                limitations.column.contained_by(
+                    cast(array([item.value for item in Limitation]), ARRAY(String()))
+                ),
+                func.cardinality(limitations).between(1, len(Limitation)),
+                or_(
+                    ~(any_(limitations) == Limitation.none.value),
+                    func.cardinality(limitations) == 1,
+                ),
+            ),
             name="assessment_limitations",
         ),
-        CheckConstraint("sleep IN ('short','variable','rested')", name="assessment_sleep"),
+        CheckConstraint(sleep.in_([item.value for item in Sleep]), name="assessment_sleep"),
+        CheckConstraint(energy.in_([item.value for item in Energy]), name="assessment_energy"),
         CheckConstraint(
-            "energy IN ('low_energy','afternoon_dip','steady')", name="assessment_energy"
-        ),
-        CheckConstraint(
-            "meal_rhythm IN ('regular_meals','skipped_meals','irregular_meals')",
+            meal_rhythm.in_([item.value for item in MealRhythm]),
             name="assessment_meal_rhythm",
         ),
         CheckConstraint(
-            "food_habits <@ ARRAY['late_snacks','sweet_drinks','sweets','none']::varchar[] AND "
-            "cardinality(food_habits) BETWEEN 1 AND "
-            "4 AND "
-            "(NOT ('none' = ANY(food_habits)) OR cardinality(food_habits) = 1)",
+            and_(
+                food_habits.column.contained_by(
+                    cast(array([item.value for item in FoodHabit]), ARRAY(String()))
+                ),
+                func.cardinality(food_habits).between(1, len(FoodHabit)),
+                or_(
+                    ~(any_(food_habits) == FoodHabit.none.value), func.cardinality(food_habits) == 1
+                ),
+            ),
             name="assessment_food_habits",
         ),
+        CheckConstraint(barrier.in_([item.value for item in Barrier]), name="assessment_barrier"),
         CheckConstraint(
-            "barrier IN ('time','motivation','unsure','no_barrier')", name="assessment_barrier"
+            time_window.in_([item.value for item in TimeWindow]), name="assessment_time_window"
         ),
         CheckConstraint(
-            "time_window IN ('morning','midday','evening','varies')", name="assessment_time_window"
-        ),
-        CheckConstraint(
-            "time_window IS NULL OR (barrier IS NOT NULL AND barrier = 'time')",
+            or_(time_window.is_(None), and_(barrier.is_not(None), barrier == Barrier.time.value)),
             name="assessment_time_window_applicable",
         ),
-        CheckConstraint(status.in_(list(AssessmentStatus)), name="assessment_status"),
+        CheckConstraint(
+            status.in_([item.value for item in AssessmentStatus]), name="assessment_status"
+        ),
         CheckConstraint(version >= 0, name="assessment_version"),
         CheckConstraint(
             age.between(INPUT_RULES.age_min, INPUT_RULES.age_max), name="assessment_age"
@@ -124,9 +137,11 @@ class Assessment(TimestampMixin, Base):
             target_weight_kg.between(INPUT_RULES.weight_min_kg, INPUT_RULES.weight_max_kg),
             name="assessment_target",
         ),
-        CheckConstraint(sex.in_(list(Sex)), name="assessment_sex"),
-        CheckConstraint(goal.in_(list(Goal)), name="assessment_goal"),
-        CheckConstraint(activity.in_(list(Activity)), name="assessment_activity"),
+        CheckConstraint(sex.in_([item.value for item in Sex]), name="assessment_sex"),
+        CheckConstraint(goal.in_([item.value for item in Goal]), name="assessment_goal"),
+        CheckConstraint(
+            activity.in_([item.value for item in Activity]), name="assessment_activity"
+        ),
         Index("ix_assessment_user_created", "user_id", "created_at"),
     )
 

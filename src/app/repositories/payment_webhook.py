@@ -1,35 +1,41 @@
 from uuid import UUID
 
+from sqlalchemy import select, update
+from sqlalchemy.dialects.postgresql import insert
+
 from app.database import Database
 from app.domain.payment import ChannelNotification
 from app.domain.payment_states import InboxStatus
+from app.models import PaymentWebhook
+from app.repositories.rows import WEBHOOK_ROW, WebhookRow, optional_row
 
 
 class PaymentWebhookRepository:
     def __init__(self, conn: Database):
         self.conn = conn
 
-    async def insert(self, notification: ChannelNotification, fingerprint: str):
+    async def insert(self, notification: ChannelNotification, fingerprint: str) -> None:
         await self.conn.execute(
-            """INSERT INTO payment_webhook_inbox(id,payment_id,status,payload,fingerprint)
-            VALUES($1,$2,$3,$4::jsonb,$5) ON CONFLICT(id) DO NOTHING""",
-            notification.event_id,
-            notification.merchant_payment_id,
-            InboxStatus.pending,
-            notification.model_dump_json(),
-            fingerprint,
+            insert(PaymentWebhook)
+            .values(
+                id=notification.event_id,
+                payment_id=notification.merchant_payment_id,
+                status=InboxStatus.pending,
+                payload=notification.model_dump(mode="json"),
+                fingerprint=fingerprint,
+            )
+            .on_conflict_do_nothing(index_elements=[PaymentWebhook.id])
         )
 
-    async def get(self, event_id: UUID, *, lock: bool = False):
-        return await self.conn.fetchrow(
-            "SELECT * FROM payment_webhook_inbox WHERE id=$1" + (" FOR UPDATE" if lock else ""),
-            event_id,
-        )
+    async def get(self, event_id: UUID, *, lock: bool = False) -> WebhookRow | None:
+        query = select(PaymentWebhook).where(PaymentWebhook.id == event_id)
+        if lock:
+            query = query.with_for_update()
+        return optional_row(await self.conn.fetchrow(query), WEBHOOK_ROW)
 
-    async def finish(self, event_id: UUID, status: InboxStatus, rejection: str | None):
+    async def finish(self, event_id: UUID, status: InboxStatus, rejection: str | None) -> None:
         await self.conn.execute(
-            "UPDATE payment_webhook_inbox SET status=$2,rejection_code=$3 WHERE id=$1",
-            event_id,
-            status,
-            rejection,
+            update(PaymentWebhook)
+            .where(PaymentWebhook.id == event_id)
+            .values(status=status, rejection_code=rejection)
         )

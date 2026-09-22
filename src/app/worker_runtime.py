@@ -8,13 +8,13 @@ from opentelemetry.instrumentation.httpx import AsyncOpenTelemetryTransport
 from opentelemetry.trace import SpanKind, Status, StatusCode
 from pydantic import ValidationError
 
+from app.composition import build_payment_workflow
 from app.domain.queue_message import DeliveryResult, PaymentMessage
 from app.payment_settings import load_payment_settings
 from app.providers.mock_payment import MockPaymentGateway
 from app.providers.worker_http import ServiceBindingTransport
 from app.runtime_database import scoped_database
 from app.services.payment_delivery import PaymentDelivery
-from app.services.payment_workflow import PaymentWorkflow
 from app.telemetry import current_headers, extracted_context, message_links, tracer
 
 logger = logging.getLogger(__name__)
@@ -54,7 +54,8 @@ def delivery(env) -> PaymentDelivery:
             ServiceBindingTransport(env.PAYMENT_API, settings.network_timeout)
         ),
     )
-    return PaymentDelivery(PaymentWorkflow(db, settings, gateway), QueuePublisher(env.PAYMENTS))
+    workflow = build_payment_workflow(db, settings, gateway)
+    return PaymentDelivery(workflow, QueuePublisher(env.PAYMENTS), workflow.outbox)
 
 
 async def relay(env, *, reconcile: bool = False) -> None:

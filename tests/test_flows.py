@@ -1,4 +1,5 @@
 import asyncio
+from datetime import timedelta
 from uuid import UUID, uuid4
 
 import asyncpg
@@ -6,9 +7,12 @@ import httpx
 import pytest
 from payment_helpers import settle
 from pydantic.alias_generators import to_camel
+from sqlalchemy import func, update
 from test_calculation import SAMPLE as DOMAIN_SAMPLE
 
+from app.database import ScopedDatabase
 from app.main import app
+from app.models import AuthSession
 from app.repositories.command import CommandRepository
 
 PROFILE = {
@@ -167,17 +171,20 @@ async def test_incomplete_payment_origin_and_expiry(client, database_url):
         )
     ).status_code == 422
     assert (
-        await client.post("/api/payments", json={}, headers=key() | {"Origin": "https://evil.example"})
+        await client.post(
+            "/api/payments", json={}, headers=key() | {"Origin": "https://evil.example"}
+        )
     ).status_code == 403
     session = (await client.get("/api/session")).json()["sessionId"]
-    conn = await asyncpg.connect(database_url)
+    conn = ScopedDatabase(lambda: asyncpg.connect(database_url))
     try:
         await conn.execute(
-            "UPDATE auth_sessions SET expires_at=now()-interval '1 second' WHERE id=$1",
-            UUID(session),
+            update(AuthSession)
+            .where(AuthSession.id == UUID(session))
+            .values(expires_at=func.now() - timedelta(seconds=1))
         )
     finally:
-        await conn.close()
+        await conn.release()
     assert (await client.get("/api/session")).status_code == 401
 
 

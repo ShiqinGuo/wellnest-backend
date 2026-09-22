@@ -1,11 +1,14 @@
 from uuid import UUID
 
 from pydantic.alias_generators import to_camel
+from sqlalchemy import update
 from test_flows import DOMAIN_SAMPLE, key, start
 
+from app.database import ScopedDatabase
 from app.domain.assessment import Answers
 from app.domain.enums import FlowVersion, Step
 from app.domain.flow import AssessmentNavigation
+from app.models import Assessment
 
 
 async def test_guidance_page_persists_and_changes_with_answers(client):
@@ -79,13 +82,15 @@ async def test_legacy_draft_remains_editable(client, database_url):
     import asyncpg
 
     a = await start(client)
-    conn = await asyncpg.connect(database_url)
+    conn = ScopedDatabase(lambda: asyncpg.connect(database_url))
     try:
         await conn.execute(
-            "UPDATE assessments SET flow_version=$1 WHERE id=$2", FlowVersion.legacy, UUID(a["id"])
+            update(Assessment)
+            .where(Assessment.id == UUID(a["id"]))
+            .values(flow_version=FlowVersion.legacy)
         )
     finally:
-        await conn.close()
+        await conn.release()
     result = await client.patch(
         f"/api/assessments/{a['id']}",
         json={

@@ -6,7 +6,11 @@ from uuid import UUID
 import asyncpg
 import pytest
 from payment_helpers import pay
+from sqlalchemy import select, update
 from test_flows import complete
+
+from app.database import ScopedDatabase
+from app.models import AssessmentResult
 
 
 def assert_language_neutral(value):
@@ -17,12 +21,14 @@ def assert_language_neutral(value):
 async def test_session_and_result_are_language_neutral(client, database_url, legacy):
     assessment = await complete(client)
     identifier = UUID(assessment["id"])
-    conn = await asyncpg.connect(database_url)
+    conn = ScopedDatabase(lambda: asyncpg.connect(database_url))
     try:
         if legacy:
             raw = json.loads(
                 await conn.fetchval(
-                    "SELECT calculation FROM assessment_results WHERE assessment_id=$1", identifier
+                    select(AssessmentResult.calculation)
+                    .select_from(AssessmentResult)
+                    .where(AssessmentResult.assessment_id == identifier)
                 )
             )
             raw["plan_preview"] = json.loads(
@@ -31,12 +37,14 @@ async def test_session_and_result_are_language_neutral(client, database_url, leg
             raw["bmi_category"] = "参考范围内"
             raw["assumptions"] = ["采用成人 Mifflin–St Jeor 公式及简化活动系数。"]
             await conn.execute(
-                "UPDATE assessment_results SET calculation=$2::jsonb WHERE assessment_id=$1",
-                identifier,
-                json.dumps(raw),
+                update(AssessmentResult)
+                .where(AssessmentResult.assessment_id == identifier)
+                .values(calculation=json.loads(json.dumps(raw)))
             )
         frozen = await conn.fetchval(
-            "SELECT calculation FROM assessment_results WHERE assessment_id=$1", identifier
+            select(AssessmentResult.calculation)
+            .select_from(AssessmentResult)
+            .where(AssessmentResult.assessment_id == identifier)
         )
         path = f"/api/assessments/{identifier}/result"
         for endpoint in ["/api/session", path]:
@@ -59,9 +67,11 @@ async def test_session_and_result_are_language_neutral(client, database_url, leg
         assert member["calculation"]["predictedGoalDate"] == original["predicted_goal_date"]
         assert (
             await conn.fetchval(
-                "SELECT calculation FROM assessment_results WHERE assessment_id=$1", identifier
+                select(AssessmentResult.calculation)
+                .select_from(AssessmentResult)
+                .where(AssessmentResult.assessment_id == identifier)
             )
             == frozen
         )
     finally:
-        await conn.close()
+        await conn.release()

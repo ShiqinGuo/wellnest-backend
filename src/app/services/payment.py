@@ -25,12 +25,15 @@ class PaymentService:
         assessments: AssessmentRepository,
         commands: CommandService,
         settings: PaymentSettings,
+        outbox: OutboxRepository,
+        locks: CommandRepository,
     ):
         self.repository = repository
         self.assessments = assessments
         self.commands = commands
         self.settings = settings
-        self.outbox = OutboxRepository(repository.conn)
+        self.outbox = outbox
+        self.locks = locks
 
     async def create(self, user_id: UUID, key: str, command: PayCommand) -> PaymentData:
         async def operation() -> PaymentData:
@@ -47,7 +50,7 @@ class PaymentService:
                     self.settings.currency,
                     self.settings.reconcile_interval,
                 )
-                await self.outbox.enqueue(PaymentTask.create, row["id"])
+                await self.outbox.enqueue(PaymentTask.create, row.id)
             return self.repository.data(row)
 
         return await self.commands.run(
@@ -77,19 +80,21 @@ class PaymentService:
         if identity is None:
             raise AppError(ErrorCode.not_found)
         # Consistent lock ordering: user first, then payment; create uses the same user lock.
-        await CommandRepository(self.repository.conn).lock_user(identity["user_id"])
+        await self.locks.lock_user(identity.user_id)
         row = await self.repository.get(payment_id, lock=True)
+        if row is None:
+            raise AppError(ErrorCode.not_found)
         if (
             result.merchant_payment_id != payment_id
-            or result.amount_minor != row["amount_minor"]
-            or result.currency != row["currency"]
+            or result.amount_minor != row.amount_minor
+            or result.currency != row.currency
             or (
-                row["provider_transaction_id"] is not None
-                and row["provider_transaction_id"] != result.transaction_id
+                row.provider_transaction_id is not None
+                and row.provider_transaction_id != result.transaction_id
             )
         ):
             raise AppError(ErrorCode.payment_mismatch)
-        current = PaymentStatus(row["status"])
+        current = PaymentStatus(row.status)
         if result.status == PaymentStatus.pending:
             target = current  # An old pending observation cannot regress a terminal payment.
         else:
@@ -103,8 +108,8 @@ class PaymentService:
         if target == PaymentStatus.succeeded:
             state = (
                 SubscriptionStatus.active
-                if await self.repository.is_member(row["user_id"])
+                if await self.repository.is_member(row.user_id)
                 else SubscriptionStatus.inactive
             )
             SubscriptionStateMachine.transition(state, SubscriptionEvent.activate)
-            await self.repository.activate(row["user_id"], row["plan_id"], payment_id)
+            await self.repository.activate(row.user_id, row.plan_id, payment_id)

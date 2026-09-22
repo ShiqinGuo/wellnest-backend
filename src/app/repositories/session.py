@@ -1,29 +1,35 @@
+from contextlib import AbstractAsyncContextManager
 from datetime import datetime
+
+from sqlalchemy import func, insert, select
 
 from app.database import Database
 from app.domain.session import IdentityData
+from app.models import AuthSession, User
 
 
 class SessionRepository:
     def __init__(self, conn: Database):
         self.conn = conn
 
-    def transaction(self):
+    def transaction(self) -> AbstractAsyncContextManager[None]:
         return self.conn.transaction()
 
     async def find(self, token_hash: str) -> IdentityData | None:
         row = await self.conn.fetchrow(
-            "SELECT id,user_id FROM auth_sessions WHERE token_hash=$1 AND expires_at>now()",
-            token_hash,
+            select(AuthSession.id, AuthSession.user_id).where(
+                AuthSession.token_hash == token_hash, AuthSession.expires_at > func.now()
+            )
         )
         return IdentityData(session_id=row["id"], user_id=row["user_id"]) if row else None
 
     async def create(self, identity: IdentityData, token_hash: str, expires_at: datetime) -> None:
-        await self.conn.execute("INSERT INTO users(id) VALUES($1)", identity.user_id)
+        await self.conn.execute(insert(User).values(id=identity.user_id))
         await self.conn.execute(
-            "INSERT INTO auth_sessions(id,user_id,token_hash,expires_at) VALUES($1,$2,$3,$4)",
-            identity.session_id,
-            identity.user_id,
-            token_hash,
-            expires_at,
+            insert(AuthSession).values(
+                id=identity.session_id,
+                user_id=identity.user_id,
+                token_hash=token_hash,
+                expires_at=expires_at,
+            )
         )

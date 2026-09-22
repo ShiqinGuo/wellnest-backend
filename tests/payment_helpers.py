@@ -3,24 +3,27 @@
 from uuid import UUID, uuid4
 
 import httpx
+from sqlalchemy import select
 
+from app.composition import build_payment_workflow
 from app.dependencies.database import connection
 from app.main import app
+from app.models import MockProviderPayment, Outbox
 from app.payment_settings import payment_settings
 from app.providers.mock_payment import MockPaymentGateway
-from app.services.payment_workflow import PaymentWorkflow
 
 
 async def settle(client, payment_id: str):
     async for db in app.dependency_overrides[connection]():
         settings = app.dependency_overrides[payment_settings]()
-        workflow = PaymentWorkflow(
+        workflow = build_payment_workflow(
             db, settings, MockPaymentGateway(settings, httpx.ASGITransport(app))
         )
         payment_uuid = UUID(payment_id)
         create = await db.fetchval(
-            "SELECT id FROM outbox_events WHERE aggregate_id=$1 AND task='payment.create'",
-            payment_uuid,
+            select(Outbox.id)
+            .select_from(Outbox)
+            .where(Outbox.aggregate_id == payment_uuid, Outbox.task == "payment.create")
         )
         await workflow.execute(create)
         view = (await client.get(f"/api/payments/{payment_id}")).json()
@@ -28,17 +31,20 @@ async def settle(client, payment_id: str):
         assert response.status_code == 200, response.text
         transaction_id = UUID(response.json()["transaction_id"])
         deliver = await db.fetchval(
-            "SELECT id FROM outbox_events WHERE aggregate_id=$1 AND task='mock.deliver_webhook'",
-            transaction_id,
+            select(Outbox.id)
+            .select_from(Outbox)
+            .where(Outbox.aggregate_id == transaction_id, Outbox.task == "mock.deliver_webhook")
         )
         await workflow.execute(deliver)
         notification_id = await db.fetchval(
-            "SELECT event_id FROM mock_provider_payments WHERE id=$1",
-            transaction_id,
+            select(MockProviderPayment.event_id)
+            .select_from(MockProviderPayment)
+            .where(MockProviderPayment.id == transaction_id)
         )
         process = await db.fetchval(
-            "SELECT id FROM outbox_events WHERE aggregate_id=$1 AND task='payment.process_webhook'",
-            notification_id,
+            select(Outbox.id)
+            .select_from(Outbox)
+            .where(Outbox.aggregate_id == notification_id, Outbox.task == "payment.process_webhook")
         )
         await workflow.execute(process)
 

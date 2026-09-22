@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import CheckConstraint, ForeignKey, Index, String, Text, text
+from sqlalchemy import CheckConstraint, ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.domain.enums import PlanId
@@ -47,9 +47,9 @@ class Payment(TimestampMixin, Base):
             user_id,
             plan_id,
             unique=True,
-            postgresql_where=text("status='pending'"),
+            postgresql_where=status == PaymentStatus.pending.value,
         ),
-        Index("payment_due", next_check_at, postgresql_where=text("status='pending'")),
+        Index("payment_due", next_check_at, postgresql_where=status == PaymentStatus.pending.value),
     )
 
 
@@ -74,7 +74,7 @@ class Outbox(CreatedAtMixin, Base):
     status: Mapped[OutboxStatus] = mapped_column()
     attempts: Mapped[int] = mapped_column(server_default="0")
     available_at: Mapped[Timestamp] = mapped_column()
-    headers: Mapped[JsonObject] = mapped_column(server_default=text("'{}'::jsonb"))
+    headers: Mapped[JsonObject] = mapped_column(server_default="{}")
     lease_token: Mapped[UUID | None] = mapped_column()
     lease_until: Mapped[Timestamp | None] = mapped_column()
     processed_at: Mapped[Timestamp | None] = mapped_column()
@@ -83,13 +83,13 @@ class Outbox(CreatedAtMixin, Base):
         CheckConstraint(status.in_([v.value for v in OutboxStatus]), name="outbox_status"),
         CheckConstraint(task.in_([v.value for v in PaymentTask]), name="outbox_task"),
         CheckConstraint(attempts >= 0, name="outbox_attempts"),
-        Index("outbox_due", available_at, postgresql_where=text("processed_at IS NULL")),
+        Index("outbox_due", available_at, postgresql_where=processed_at.is_(None)),
         Index(
             "outbox_one_open_task",
             task,
             aggregate_id,
             unique=True,
-            postgresql_where=text("processed_at IS NULL AND status <> 'failed'"),
+            postgresql_where=processed_at.is_(None) & (status != OutboxStatus.failed.value),
         ),
     )
 

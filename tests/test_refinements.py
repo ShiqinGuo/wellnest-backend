@@ -5,14 +5,17 @@ from uuid import UUID
 
 import asyncpg
 from payment_helpers import pay
+from sqlalchemy import func, select, update
 from test_flows import SAMPLE, complete, key, start
 from test_refactor_and_jev import StubTransport, answers
 
+from app.database import ScopedDatabase
 from app.dependencies.database import connection
 from app.dependencies.services import get_jev
 from app.domain.assessment import CompleteAnswers
 from app.domain.calculation import assess
 from app.main import app
+from app.models import Assessment, AssessmentResult, GuidanceAttempt
 from app.providers.typesafe import JevClient
 
 
@@ -132,23 +135,24 @@ async def test_guidance_retry_auth_replay_snapshot_and_version(client, database_
     assert {k: v for k, v in before.items() if k != "guidance"} == {
         k: v for k, v in after.items() if k != "guidance"
     }
-    conn = await asyncpg.connect(database_url)
+    conn = ScopedDatabase(lambda: asyncpg.connect(database_url))
     try:
         original_status = await conn.fetchval(
-            "SELECT calculation->'guidance'->>'status' FROM assessment_results "
-            "WHERE assessment_id=$1",
-            UUID(assessment["id"]),
+            select(AssessmentResult.calculation["guidance"]["status"].astext)
+            .select_from(AssessmentResult)
+            .where(AssessmentResult.assessment_id == UUID(assessment["id"]))
         )
         assert original_status == "unavailable"
         assert (
             await conn.fetchval(
-                "SELECT count(*) FROM guidance_attempts WHERE assessment_id=$1",
-                UUID(assessment["id"]),
+                select(func.count())
+                .select_from(GuidanceAttempt)
+                .where(GuidanceAttempt.assessment_id == UUID(assessment["id"]))
             )
             == 1
         )
     finally:
-        await conn.close()
+        await conn.release()
 
 
 async def test_concurrent_guidance_retries_keep_one_revision(client):
@@ -183,13 +187,15 @@ async def test_concurrent_guidance_retries_keep_one_revision(client):
 
 async def test_unknown_flow_cannot_silently_use_current_rules(client, database_url):
     assessment = await start(client)
-    conn = await asyncpg.connect(database_url)
+    conn = ScopedDatabase(lambda: asyncpg.connect(database_url))
     try:
         await conn.execute(
-            "UPDATE assessments SET flow_version='future-v99' WHERE id=$1", UUID(assessment["id"])
+            update(Assessment)
+            .where(Assessment.id == UUID(assessment["id"]))
+            .values(flow_version="future-v99")
         )
     finally:
-        await conn.close()
+        await conn.release()
     path = f"/api/assessments/{assessment['id']}"
     for endpoint, method, body in [
         (path, "PATCH", {"expectedVersion": 0, "answers": SAMPLE}),
@@ -203,23 +209,24 @@ async def test_unknown_flow_cannot_silently_use_current_rules(client, database_u
 async def test_historical_result_is_not_recalculated_after_rules_upgrade(client, database_url):
     assessment = await complete(client)
     await pay(client)
-    conn = await asyncpg.connect(database_url)
+    conn = ScopedDatabase(lambda: asyncpg.connect(database_url))
     try:
         row = await conn.fetchval(
-            "SELECT calculation FROM assessment_results WHERE assessment_id=$1",
-            UUID(assessment["id"]),
+            select(AssessmentResult.calculation)
+            .select_from(AssessmentResult)
+            .where(AssessmentResult.assessment_id == UUID(assessment["id"]))
         )
         snapshot = json.loads(row)
         snapshot["algorithm_version"] = "wellness-v1"
         snapshot["predicted_goal_date"] = "2026-09-17"
         snapshot.pop("guidance", None)
         await conn.execute(
-            "UPDATE assessment_results SET calculation=$2::jsonb WHERE assessment_id=$1",
-            UUID(assessment["id"]),
-            json.dumps(snapshot),
+            update(AssessmentResult)
+            .where(AssessmentResult.assessment_id == UUID(assessment["id"]))
+            .values(calculation=json.loads(json.dumps(snapshot)))
         )
     finally:
-        await conn.close()
+        await conn.release()
     result = (await client.get(f"/api/assessments/{assessment['id']}/result")).json()
     assert result["calculation"]["algorithmVersion"] == "wellness-v1"
     assert result["calculation"]["predictedGoalDate"] == "2026-09-17"

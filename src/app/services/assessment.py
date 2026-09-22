@@ -27,10 +27,17 @@ from app.services.command import CommandService
 
 
 class AssessmentService:
-    def __init__(self, repository: AssessmentRepository, commands: CommandService, jev: JevClient):
+    def __init__(
+        self,
+        repository: AssessmentRepository,
+        commands: CommandService,
+        jev: JevClient,
+        guidance: GuidanceRepository,
+    ):
         self.repository = repository
         self.commands = commands
         self.jev = jev
+        self.guidance = guidance
 
     async def get(
         self, user_id: UUID, assessment_id: UUID, *, lock: bool = False
@@ -166,11 +173,7 @@ class AssessmentService:
         result = await self.repository.result(user_id, assessment_id)
         if result is None:
             raise AppError(ErrorCode.result_not_found)
-        latest = (
-            await GuidanceRepository(self.repository.conn).latest(assessment_id)
-            if result.is_member
-            else None
-        )
+        latest = await self.guidance.latest(assessment_id) if result.is_member else None
         if latest:
             result.calculation.guidance = latest
         return result

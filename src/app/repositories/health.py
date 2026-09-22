@@ -1,4 +1,9 @@
+from sqlalchemy import column, select, table
+
 from app.database import Database
+
+# Alembic owns this table; it is intentionally not part of application metadata.
+MIGRATION_VERSION = table("alembic_version", column("version_num"))
 
 
 class HealthRepository:
@@ -6,4 +11,4 @@ class HealthRepository:
         self.conn = conn
 
     async def check_database(self) -> None:
-        await self.conn.fetchval("SELECT version_num FROM alembic_version")
+        await self.conn.fetchval(select(MIGRATION_VERSION.c.version_num))

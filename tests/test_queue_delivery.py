@@ -1,12 +1,15 @@
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
 from pydantic import ValidationError
+from sqlalchemy import insert, update
 from test_payments import workflow as workflow
 
 from app.domain.payment_states import PaymentTask
 from app.domain.queue_message import DeliveryResult, PaymentMessage
+from app.models import Outbox
 from app.services.payment_delivery import PaymentDelivery
 from app.worker_runtime import consume_batch
 
@@ -25,15 +28,17 @@ class Publisher:
 async def prepare(flow):
     event_id = uuid4()
     await flow.db.execute(
-        """INSERT INTO outbox_events(id,task,aggregate_id,status,available_at)
-        VALUES($1,$2,$3,'pending','1990-01-01')""",
-        event_id,
-        PaymentTask.create,
-        uuid4(),
+        insert(Outbox).values(
+            id=event_id,
+            task=PaymentTask.create,
+            aggregate_id=uuid4(),
+            status="pending",
+            available_at=datetime(1990, 1, 1, tzinfo=UTC),
+        )
     )
     flow.settings = flow.settings.model_copy(update={"batch_size": 1})
     publisher = Publisher()
-    service = PaymentDelivery(flow, publisher)
+    service = PaymentDelivery(flow, publisher, flow.outbox)
     return event_id, publisher, service
 
 
@@ -43,9 +48,11 @@ async def test_publish_timeout_keeps_durable_event_and_fences_late_delivery(work
     await service.relay()
     old = publisher.messages[0]
     row = await service.outbox.get(event_id)
-    assert row["status"] == "pending" and row["last_error"] == "TimeoutError"
+    assert row.status == "pending" and row.last_error == "TimeoutError"
     await service.db.execute(
-        "UPDATE outbox_events SET available_at='1990-01-01' WHERE id=$1", event_id
+        update(Outbox)
+        .where(Outbox.id == event_id)
+        .values(available_at=datetime(1990, 1, 1, tzinfo=UTC))
     )
     publisher.error = None
     await service.relay()
@@ -53,7 +60,7 @@ async def test_publish_timeout_keeps_durable_event_and_fences_late_delivery(work
     assert new.lease_token != old.lease_token
     assert await service.consume(old) is None
     row = await service.outbox.get(event_id)
-    assert row["processed_at"] is None and row["lease_token"] == new.lease_token
+    assert row.processed_at is None and row.lease_token == new.lease_token
 
 
 async def test_execution_retry_is_bounded_and_preserves_failure(workflow):
@@ -64,14 +71,14 @@ async def test_execution_retry_is_bounded_and_preserves_failure(workflow):
     # The missing payment is a real execution failure, not a mocked handler.
     assert await service.consume(message) == service.settings.retry_base
     row = await service.outbox.get(event_id)
-    assert row["attempts"] == 2 and row["last_error"] == "ValueError"
+    assert row.attempts == 2 and row.last_error == "ValueError"
     assert await service.consume(message) is None
     row = await service.outbox.get(event_id)
-    assert row["status"] == "failed" and row["processed_at"] is None
+    assert row.status == "failed" and row.processed_at is None
     assert await service.outbox.requeue(event_id)
     # Old queue messages cannot execute an operator-requeued event.
     assert await service.consume(message) is None
-    assert (await service.outbox.get(event_id))["attempts"] == 0
+    assert (await service.outbox.get(event_id)).attempts == 0
 
 
 async def test_commit_before_ack_and_late_publish_confirmation(workflow):
@@ -79,9 +86,9 @@ async def test_commit_before_ack_and_late_publish_confirmation(workflow):
     row = await service.outbox.claim(service.settings)
     await service.outbox.done(event_id)
     await service.outbox.published(row)
-    message = PaymentMessage(event_id=event_id, lease_token=row["lease_token"])
+    message = PaymentMessage(event_id=event_id, lease_token=row.lease_token)
     assert await service.consume(message) is None
-    assert (await service.outbox.get(event_id))["processed_at"] is not None
+    assert (await service.outbox.get(event_id)).processed_at is not None
 
 
 async def test_stale_publish_cannot_resurrect_exhausted_event(workflow):
@@ -91,7 +98,7 @@ async def test_stale_publish_cannot_resurrect_exhausted_event(workflow):
         row, "Exhausted", service.settings.model_copy(update={"max_attempts": 1})
     )
     await service.outbox.published(row)
-    assert (await service.outbox.get(event_id))["status"] == "failed"
+    assert (await service.outbox.get(event_id)).status == "failed"
 
 
 class Message:

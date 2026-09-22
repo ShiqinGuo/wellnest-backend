@@ -4,6 +4,10 @@ import argparse
 import asyncio
 from uuid import UUID
 
+from sqlalchemy import func, select
+
+from app.domain.payment_states import OutboxStatus
+from app.models import Outbox
 from app.repositories.outbox import OutboxRepository
 from app.runtime_database import scoped_database
 
@@ -19,11 +23,16 @@ async def main():
                 "requeued" if await OutboxRepository(db).requeue(args.requeue) else "not requeued"
             )
         else:
-            value = await db.fetchval(
-                """SELECT coalesce(json_agg(t),'[]') FROM
-                (SELECT id,task,aggregate_id,attempts,last_error FROM outbox_events
-                 WHERE status='failed' AND processed_at IS NULL ORDER BY created_at LIMIT 100) t"""
+            failed = (
+                select(
+                    Outbox.id, Outbox.task, Outbox.aggregate_id, Outbox.attempts, Outbox.last_error
+                )
+                .where(Outbox.status == OutboxStatus.failed, Outbox.processed_at.is_(None))
+                .order_by(Outbox.created_at)
+                .limit(100)
+                .subquery()
             )
+            value = await db.fetchval(select(func.json_agg(failed.table_valued())))
             print(value)
     finally:
         await db.release()

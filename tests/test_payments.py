@@ -1,28 +1,39 @@
 import asyncio
 import time
+from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 import asyncpg
 import httpx
 import pytest
+from sqlalchemy import func, insert, select, update
 from test_flows import complete, key
 
+from app.composition import build_payment_workflow
 from app.database import ScopedDatabase
 from app.domain.payment import ChannelNotification
 from app.domain.payment_states import PaymentEvent, PaymentStateMachine, PaymentStatus, PaymentTask
 from app.errors import AppError
 from app.main import app
+from app.models import (
+    MockProviderPayment,
+    Outbox,
+    Payment,
+    PaymentWebhook,
+    Subscription,
+)
 from app.payment_settings import payment_settings
 from app.providers.mock_payment import MockPaymentGateway, sign, verify
 from app.repositories.outbox import OutboxRepository
-from app.services.payment_workflow import PaymentWorkflow
 
 
 @pytest.fixture
 async def workflow(client, database_url):
     db = ScopedDatabase(lambda: asyncpg.connect(database_url))
     settings = app.dependency_overrides[payment_settings]()
-    flow = PaymentWorkflow(db, settings, MockPaymentGateway(settings, httpx.ASGITransport(app)))
+    flow = build_payment_workflow(
+        db, settings, MockPaymentGateway(settings, httpx.ASGITransport(app))
+    )
     try:
         yield flow
     finally:
@@ -41,10 +52,13 @@ async def payment(client):
 
 async def run(flow, task, aggregate_id):
     event_id = await flow.db.fetchval(
-        "SELECT id FROM outbox_events WHERE task=$1 AND aggregate_id=$2 "
-        "AND processed_at IS NULL ORDER BY created_at LIMIT 1",
-        task,
-        aggregate_id,
+        select(Outbox.id)
+        .select_from(Outbox)
+        .where(
+            Outbox.task == task, Outbox.aggregate_id == aggregate_id, Outbox.processed_at.is_(None)
+        )
+        .order_by(Outbox.created_at)
+        .limit(1)
     )
     assert event_id is not None
     await flow.execute(event_id)
@@ -63,7 +77,11 @@ async def checkout(client, flow, payment_id, outcome="succeeded"):
 
 
 async def notification(flow, transaction_id):
-    row = await flow.db.fetchrow("SELECT * FROM mock_provider_payments WHERE id=$1", transaction_id)
+    row = await flow.db.fetchrow(
+        select(MockProviderPayment)
+        .select_from(MockProviderPayment)
+        .where(MockProviderPayment.id == transaction_id)
+    )
     view = await flow.gateway.query(row["merchant_payment_id"])
     return ChannelNotification(**view.model_dump(), event_id=row["event_id"])
 
@@ -102,8 +120,9 @@ async def test_real_callback_boundary_and_repeated_delivery(client, workflow):
     assert "userId" not in view and "providerTransactionId" not in view
     assert (
         await workflow.db.fetchval(
-            "SELECT count(*) FROM subscriptions WHERE source_payment_id=$1",
-            payment_id,
+            select(func.count())
+            .select_from(Subscription)
+            .where(Subscription.source_payment_id == payment_id)
         )
         == 1
     )
@@ -117,7 +136,9 @@ async def test_lost_callback_query_and_missing_channel_create_recover(client, wo
     query = await workflow.gateway.query(payment_id)
     await client.post(query.checkout_url + "/confirm", json={})
     # Deliberately do NOT dispatch the provider callback.
-    await workflow.db.execute("UPDATE payments SET next_check_at=now() WHERE id=$1", payment_id)
+    await workflow.db.execute(
+        update(Payment).where(Payment.id == payment_id).values(next_check_at=func.now())
+    )
     for _ in range(100):
         if not await workflow.schedule_reconciliation():
             break
@@ -142,8 +163,9 @@ async def test_timeout_after_provider_created_does_not_duplicate_or_fail(client,
     await run(workflow, PaymentTask.create, payment_id)
     assert (
         await workflow.db.fetchval(
-            "SELECT count(*) FROM mock_provider_payments WHERE merchant_payment_id=$1",
-            payment_id,
+            select(func.count())
+            .select_from(MockProviderPayment)
+            .where(MockProviderPayment.merchant_payment_id == payment_id)
         )
         == 1
     )
@@ -155,9 +177,9 @@ async def test_channel_terminal_states_never_grant_membership(client, workflow, 
     await run(workflow, PaymentTask.create, payment_id)
     if outcome == "closed":
         await workflow.db.execute(
-            "UPDATE mock_provider_payments SET expires_at=now()-interval '1 second' "
-            "WHERE merchant_payment_id=$1",
-            payment_id,
+            update(MockProviderPayment)
+            .where(MockProviderPayment.merchant_payment_id == payment_id)
+            .values(expires_at=func.now() - timedelta(seconds=1))
         )
         view = await workflow.gateway.query(payment_id)
         assert view.status == PaymentStatus.closed
@@ -195,7 +217,7 @@ async def test_webhook_signature_replay_mismatch_and_no_bare_route(client, workf
     assert (await post_notification(client, workflow, payload)).status_code == 409
     await run(workflow, PaymentTask.process_webhook, bad.event_id)
     row = await workflow.db.fetchrow(
-        "SELECT * FROM payment_webhook_inbox WHERE id=$1", bad.event_id
+        select(PaymentWebhook).select_from(PaymentWebhook).where(PaymentWebhook.id == bad.event_id)
     )
     assert row["status"] == "rejected" and row["rejection_code"] == "PAYMENT_MISMATCH"
     assert (await client.get("/api/session")).json()["subscriptionStatus"] == "inactive"
@@ -225,7 +247,7 @@ async def test_callback_and_query_race_preserve_one_entitlement(client, workflow
     payload = await notification(workflow, transaction_id)
     await client.post(f"/api/payments/{payment_id}/refresh")
     other_db = ScopedDatabase(lambda: asyncpg.connect(database_url))
-    other = PaymentWorkflow(other_db, workflow.settings, workflow.gateway)
+    other = build_payment_workflow(other_db, workflow.settings, workflow.gateway)
     try:
         await asyncio.gather(
             run(workflow, PaymentTask.process_webhook, payload.event_id),
@@ -235,8 +257,9 @@ async def test_callback_and_query_race_preserve_one_entitlement(client, workflow
         await other_db.release()
     assert (
         await workflow.db.fetchval(
-            "SELECT count(*) FROM subscriptions WHERE source_payment_id=$1",
-            payment_id,
+            select(func.count())
+            .select_from(Subscription)
+            .where(Subscription.source_payment_id == payment_id)
         )
         == 1
     )
@@ -259,8 +282,9 @@ async def test_transaction_failure_keeps_inbox_and_payment_retryable(client, wor
     assert (await client.get("/api/session")).json()["subscriptionStatus"] == "inactive"
     assert (
         await workflow.db.fetchval(
-            "SELECT status FROM payment_webhook_inbox WHERE id=$1",
-            payload.event_id,
+            select(PaymentWebhook.status)
+            .select_from(PaymentWebhook)
+            .where(PaymentWebhook.id == payload.event_id)
         )
         == "pending"
     )
@@ -292,28 +316,32 @@ async def test_outbox_lease_recovery_and_bounded_failures(client, workflow):
     # Directly target a fresh event; other tests may have deliberately pending events.
     event_id = uuid4()
     await workflow.db.execute(
-        """INSERT INTO outbox_events(id,task,aggregate_id,status,available_at)
-        VALUES($1,$2,$3,'pending','2000-01-01')""",
-        event_id,
-        PaymentTask.create,
-        uuid4(),
+        insert(Outbox).values(
+            id=event_id,
+            task=PaymentTask.create,
+            aggregate_id=uuid4(),
+            status="pending",
+            available_at=datetime(2000, 1, 1, tzinfo=UTC),
+        )
     )
     outbox = OutboxRepository(workflow.db)
     row = await outbox.claim(workflow.settings)
-    assert row["id"] == event_id and row["attempts"] == 1
+    assert row.id == event_id and row.attempts == 1
     await outbox.published(row)
     # Simulate publish succeeded but worker disappeared; lease expiry makes it deliverable again.
-    await workflow.db.execute("UPDATE outbox_events SET lease_until=now() WHERE id=$1", event_id)
+    await workflow.db.execute(
+        update(Outbox).where(Outbox.id == event_id).values(lease_until=func.now())
+    )
     reclaimed = await outbox.claim(workflow.settings)
-    assert reclaimed["id"] == event_id and reclaimed["lease_token"] != row["lease_token"]
+    assert reclaimed.id == event_id and reclaimed.lease_token != row.lease_token
     await outbox.failed(row, "StalePublisher", workflow.settings)
-    assert (await outbox.get(event_id))["lease_token"] == reclaimed["lease_token"]
+    assert (await outbox.get(event_id)).lease_token == reclaimed.lease_token
     await outbox.failed(
         reclaimed, "BrokerUnavailable", workflow.settings.model_copy(update={"max_attempts": 2})
     )
-    assert (await outbox.get(event_id))["status"] == "failed"
+    assert (await outbox.get(event_id)).status == "failed"
     assert await outbox.requeue(event_id)
-    assert (await outbox.get(event_id))["status"] == "pending"
+    assert (await outbox.get(event_id)).status == "pending"
 
 
 def test_openapi_documents_webhook_body_and_only_prefixed_payment_routes():

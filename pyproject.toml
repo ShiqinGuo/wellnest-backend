@@ -12,11 +12,24 @@ dependencies = [
     "opentelemetry-instrumentation-fastapi>=0.65b0",
     "opentelemetry-instrumentation-httpx>=0.65b0",
     "opentelemetry-instrumentation-asyncpg>=0.65b0",
+    "sqlalchemy>=2.0,<3",
 ]
 
 [dependency-groups]
 deploy = ["workers-py", "workers-runtime-sdk"]
-dev = ["uvicorn>=0.34", "httpx>=0.28", "pytest>=8", "pytest-asyncio>=1", "ruff>=0.11", "sqlalchemy>=2.0,<3", "alembic>=1.15", "psycopg[binary]>=3.2", "testcontainers[postgres]>=4.10"]
+dev = [
+    "uvicorn>=0.34",
+    "httpx>=0.28",
+    "pytest>=8",
+    "pytest-asyncio>=1",
+    "ruff>=0.11",
+    "sqlalchemy>=2.0,<3",
+    "alembic>=1.15",
+    "psycopg[binary]>=3.2",
+    "testcontainers[postgres]>=4.10",
+    "pyright>=1.1.414",
+    "asyncpg-stubs>=0.31.3",
+]
 migrations = [
     "alembic>=1.15",
     "psycopg[binary]>=3.2",
@@ -36,3 +49,10 @@ line-length = 100
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "ASYNC"]
 
+
+[tool.pyright]
+include = ["src/app/database.py", "src/app/repositories", "src/app/services", "src/app/composition.py", "src/app/dependencies"]
+extraPaths = ["src"]
+pythonVersion = "3.13"
+typeCheckingMode = "basic"
+reportMissingTypeStubs = false

@@ -8,31 +8,37 @@ from app.errors import AppError, ErrorCode
 from app.payment_settings import PaymentSettings
 from app.repositories.mock_provider import MockProviderRepository
 from app.repositories.outbox import OutboxRepository
+from app.repositories.rows import ProviderRow
 from app.settings import RUNTIME
 
 
 class MockProviderService:
-    def __init__(self, repository: MockProviderRepository, settings: PaymentSettings):
+    def __init__(
+        self,
+        repository: MockProviderRepository,
+        settings: PaymentSettings,
+        outbox: OutboxRepository,
+    ):
         self.repository = repository
         self.settings = settings
-        self.outbox = OutboxRepository(repository.conn)
+        self.outbox = outbox
 
-    def view(self, row) -> ChannelPayment:
+    def view(self, row: ProviderRow) -> ChannelPayment:
         return ChannelPayment(
-            merchant_payment_id=row["merchant_payment_id"],
-            amount_minor=row["amount_minor"],
-            currency=row["currency"],
-            transaction_id=row["id"],
-            status=row["status"],
-            expires_at=row["expires_at"],
-            checkout_url=self.settings.public_url + "/api/mock-checkout/" + row["checkout_token"],
+            merchant_payment_id=row.merchant_payment_id,
+            amount_minor=row.amount_minor,
+            currency=row.currency,
+            transaction_id=row.id,
+            status=row.status,
+            expires_at=row.expires_at,
+            checkout_url=self.settings.public_url + "/api/mock-checkout/" + row.checkout_token,
         )
 
-    async def expire(self, row):
-        if row["status"] == PaymentStatus.pending and row["expires_at"] <= datetime.now(UTC):
+    async def expire(self, row: ProviderRow) -> ProviderRow:
+        if row.status == PaymentStatus.pending and row.expires_at <= datetime.now(UTC):
             target = PaymentStateMachine.transition(PaymentStatus.pending, PaymentEvent.close)
-            row = await self.repository.update(row["id"], target)
-            await self.outbox.enqueue(PaymentTask.deliver_webhook, row["id"])
+            row = await self.repository.update(row.id, target)
+            await self.outbox.enqueue(PaymentTask.deliver_webhook, row.id)
         return row
 
     async def create(self, command: ChannelCreate) -> ChannelPayment:
@@ -44,7 +50,7 @@ class MockProviderService:
                 uuid4(),
                 self.settings.checkout_lifetime,
             )
-            if row["amount_minor"] != command.amount_minor or row["currency"] != command.currency:
+            if row.amount_minor != command.amount_minor or row.currency != command.currency:
                 raise AppError(ErrorCode.payment_mismatch)
             return self.view(await self.expire(row))
 
@@ -61,19 +67,19 @@ class MockProviderService:
             if row is None:
                 raise AppError(ErrorCode.not_found)
             row = await self.expire(row)
-            if command and row["status"] != PaymentStatus.closed:
+            if command and row.status != PaymentStatus.closed:
                 event = (
                     PaymentEvent.succeed
                     if command.outcome == PaymentStatus.succeeded
                     else PaymentEvent.fail
                 )
-                target = PaymentStateMachine.transition(PaymentStatus(row["status"]), event)
-                row = await self.repository.update(row["id"], target)
-                await self.outbox.enqueue(PaymentTask.deliver_webhook, row["id"])
+                target = PaymentStateMachine.transition(PaymentStatus(row.status), event)
+                row = await self.repository.update(row.id, target)
+                await self.outbox.enqueue(PaymentTask.deliver_webhook, row.id)
             return self.view(row)
 
     async def notification(self, transaction_id: UUID) -> ChannelNotification:
         row = await self.repository.by_id(transaction_id)
-        if row is None or row["status"] == PaymentStatus.pending:
+        if row is None or row.status == PaymentStatus.pending:
             raise ValueError("No terminal channel outcome")
-        return ChannelNotification(**self.view(row).model_dump(), event_id=row["event_id"])
+        return ChannelNotification(**self.view(row).model_dump(), event_id=row.event_id)

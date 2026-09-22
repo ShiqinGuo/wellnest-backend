@@ -36,7 +36,7 @@ Mock 渠道依然走独立 HTTP 协议和签名校验，Worker 内通过 `PAYMEN
 
 - `models`：Mapped 字段别名、Mixin、外键、唯一索引和 CHECK 约束；Alembic 独立版本迁移。
 - `domain`：支付、订阅、Outbox、Inbox 各自的枚举和状态机；DTO 不依赖 HTTP。
-- `repositories`：SQL 和持久化，服务控制事务边界。
+- `repositories`：仅使用 SQLAlchemy 表达式引用 mapped models；服务控制事务边界。
 - `services`：创建支付、回调接收、幂等落账、主动查单与渠道 Mock。
 - `providers`：通过 HTTP 调用模拟支付平台；共享 HMAC 签名协议，不直接修改其数据库记录。
 - `routers/schemas/dependencies`：请求验证、身份解析、依赖注入和响应白名单。
@@ -167,7 +167,7 @@ Queue and Cron forward through authenticated Service Binding HTTP fetch to the S
 
 FastAPI、HTTPX、asyncpg 的标准 OpenTelemetry Instrumentor 在 `app/telemetry.py` 统一注册。业务服务不创建手工 span。服务绑定使用官方 `AsyncOpenTelemetryTransport`；Outbox 的通用 JSONB `headers` 保存 W3C `traceparent` / `tracestate`，Queue 适配器负责上下文传递。单消息消费采用父子关系，同时记录 Span Link；延迟投递和重试仍接续原 trace。
 
-Workers 使用不需要后台线程的 `SimpleSpanProcessor`，将 SDK span 输出为 JSON 日志。打开 `wellnest-backend → Observability → Logs`，用响应头 `X-Trace-ID` 筛选字段 `trace_id`，再筛选 `event = otel.span`。记录包含 `span_id`、`parent_span_id`、`duration_ms`、开始/结束时间和状态。应用日志附带当前 trace/span ID。SQL 只导出操作名和指纹，不输出 SQL 正文、参数、URL、请求头或异常消息。
+Workers 使用不需要后台线程的 `SimpleSpanProcessor`，将 SDK span 输出为 JSON 日志。打开 `wellnest-backend → Observability → Events`，用响应头 `X-Trace-ID` 筛选字段 `trace_id`，再筛选 `event = otel.span`。记录包含 `span_id`、`parent_span_id`、`duration_ms`、开始/结束时间和状态。应用日志附带当前 trace/span ID。SQL 只导出操作名和指纹，不输出 SQL 正文、参数、URL、请求头或异常消息。
 
 支付确认 trace 连接 confirm → Outbox → Queue → 内部 HTTP → webhook → Queue → 权益写入。浏览器轮询和结果读取是独立请求；Outbox 扫描 SQL 也有自身 span，事件执行通过持久化上下文接续。`messaging.delivery.age_ms` 包含重试等待，不等同于纯队列等待。
 
@@ -184,3 +184,13 @@ Cloudflare 原生 Traces 仍显示平台调用；Python SDK span 存在 Logs 中
 
 
 错误契约集中定义于 `app/errors.py`：每个 ErrorCode 固定 wire code、HTTPStatus 与英文默认 message。业务抛出 `AppError(ErrorCode.version_conflict, details={"currentVersion": version})`，不覆盖状态或文案；所有应用错误经统一响应构造器返回。用户可见的中英文提示仍由前端根据 code 翻译。参数校验 issues 仅包含 field 和机器可读 code，不返回原始输入或异常文本。成功响应及上游 HTTP 状态判断使用标准库 HTTPStatus。
+
+
+### 数据访问与依赖组装
+
+- Service / Workflow 只接收依赖。FastAPI dependencies、Worker 适配器和 `composition.py` 负责组装，整个支付调用图共享请求级 Database；具体支付渠道通过 PaymentGateway 注入。
+- models 是运行时 SQLAlchemy 表达式及目标结构的唯一模型声明；Alembic 版本链负责数据库变更。生产不使用 create_all，也不修改已发布的历史迁移。
+- Repository 只构造 select/insert/update/delete、on_conflict 和 with_for_update(skip_locked=True)，不使用 SQL 字符串、text() 或 literal_column()。DB API 拒绝 SQL 字符串。
+- Cloudflare Python Workers 暂不支持 greenlet，故使用 SQLAlchemy Core 编译及官方 asyncpg dialect 参数处理，由 asyncpg 执行；不声称使用 AsyncSession。驱动记录不跨 Repository 边界：已有 Pydantic 领域对象保留，支付/Outbox/Inbox/渠道记录使用 frozen dataclass。
+- `uv run pyright` 检查 DB、Repositories、Services、Dependencies 与 composition；CI 强制执行。类型检查不能证明数据库字段存在，真实 PostgreSQL 的 schema drift 与集成测试负责补足。
+- schema drift 测试比较迁移后的结构与 metadata（类型、nullable、默认值、索引和外键），另以 PostgreSQL 规范化结果比较 CHECK 约束；故意删除 NOT NULL 的回归用例验证检查确实能报错。

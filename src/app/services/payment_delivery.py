@@ -1,7 +1,6 @@
 """Outbox owns the retry budget; Queues transports a fenced event reference."""
 
 import asyncio
-import json
 import logging
 from typing import Protocol
 
@@ -18,11 +17,13 @@ class EventPublisher(Protocol):
 
 
 class PaymentDelivery:
-    def __init__(self, workflow: PaymentWorkflow, publisher: EventPublisher):
+    def __init__(
+        self, workflow: PaymentWorkflow, publisher: EventPublisher, outbox: OutboxRepository
+    ):
         self.workflow = workflow
         self.db = workflow.db
         self.settings = workflow.settings
-        self.outbox = OutboxRepository(self.db)
+        self.outbox = outbox
         self.publisher = publisher
 
     async def relay(self, *, reconcile: bool = False) -> None:
@@ -35,23 +36,25 @@ class PaymentDelivery:
                 row = await self.outbox.claim(self.settings)
                 if row is None:
                     break
-                if row["attempts"] > self.settings.max_attempts:
+                if row.attempts > self.settings.max_attempts:
                     await self.outbox.failed(row, "AttemptsExhausted", self.settings)
                     continue
+                if row.lease_token is None:
+                    raise LookupError("Claimed outbox event has no lease token")
                 await self.db.release()
                 try:
                     await self.publisher.publish(
                         PaymentMessage(
-                            event_id=row["id"],
-                            lease_token=row["lease_token"],
-                            headers=json.loads(row["headers"]),
+                            event_id=row.id,
+                            lease_token=row.lease_token,
+                            headers=row.headers,
                         )
                     )
                 except Exception as exc:
                     await self.outbox.failed(row, type(exc).__name__, self.settings)
                     logger.warning(
                         "Queue publish failed: event=%s error=%s",
-                        row["id"],
+                        row.id,
                         type(exc).__name__,
                         exc_info=True,
                     )
@@ -63,9 +66,9 @@ class PaymentDelivery:
         row = await self.outbox.get(message.event_id)
         if (
             row is None
-            or row["processed_at"] is not None
-            or row["status"] == OutboxStatus.failed
-            or row["lease_token"] != message.lease_token
+            or row.processed_at is not None
+            or row.status == OutboxStatus.failed
+            or row.lease_token != message.lease_token
         ):
             return None
         # Renew before execution so the recovery relay doesn't republish an active task.
@@ -82,10 +85,10 @@ class PaymentDelivery:
                 type(exc).__name__,
                 exc_info=True,
             )
-            if row["attempts"] >= self.settings.max_attempts:
+            if row.attempts >= self.settings.max_attempts:
                 await self.outbox.failed(row, type(exc).__name__, self.settings)
                 return None
-            delay = min(self.settings.retry_cap, self.settings.retry_base ** row["attempts"])
+            delay = min(self.settings.retry_cap, self.settings.retry_base**row.attempts)
             await self.outbox.retry_execution(row, type(exc).__name__, delay, self.settings)
             return delay
         return None

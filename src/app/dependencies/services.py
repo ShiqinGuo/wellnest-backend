@@ -9,6 +9,7 @@ from app.providers.typesafe import HttpxTransport, JevClient, WorkersTransport
 from app.repositories.assessment import AssessmentRepository
 from app.repositories.command import CommandRepository
 from app.repositories.guidance import GuidanceRepository
+from app.repositories.outbox import OutboxRepository
 from app.repositories.payment import PaymentRepository
 from app.repositories.session import SessionRepository
 from app.services.assessment import AssessmentService
@@ -42,13 +43,20 @@ JevClientDep = Annotated[JevClient, Depends(get_jev)]
 async def get_assessments(
     db: DatabaseDep, commands: CommandServiceDep, jev: JevClientDep
 ) -> AssessmentService:
-    return AssessmentService(AssessmentRepository(db), commands, jev)
+    return AssessmentService(AssessmentRepository(db), commands, jev, GuidanceRepository(db))
 
 
 async def get_payments(
     db: DatabaseDep, commands: CommandServiceDep, settings: PaymentSettingsDep
 ) -> PaymentService:
-    return PaymentService(PaymentRepository(db), AssessmentRepository(db), commands, settings)
+    return PaymentService(
+        PaymentRepository(db),
+        AssessmentRepository(db),
+        commands,
+        settings,
+        OutboxRepository(db),
+        commands.repository,
+    )
 
 
 async def get_sessions(db: DatabaseDep) -> SessionService:

@@ -4,8 +4,10 @@ from uuid import UUID
 
 from pydantic import BaseModel
 from pydantic.alias_generators import to_snake
+from sqlalchemy import insert, select
 
 from app.database import Database
+from app.models import CommandReceipt, User
 
 
 @dataclass(frozen=True)
@@ -25,15 +27,15 @@ class CommandRepository:
         await self.conn.release()
 
     async def lock_user(self, user_id: UUID) -> None:
-        await self.conn.fetchrow("SELECT id FROM users WHERE id=$1 FOR UPDATE", user_id)
+        await self.conn.fetchrow(select(User.id).where(User.id == user_id).with_for_update())
 
     async def receipt(self, user_id: UUID, command: str, key: str) -> StoredReceipt | None:
         row = await self.conn.fetchrow(
-            "SELECT fingerprint,response FROM command_receipts "
-            "WHERE user_id=$1 AND command=$2 AND key=$3",
-            user_id,
-            command,
-            key,
+            select(CommandReceipt.fingerprint, CommandReceipt.response).where(
+                CommandReceipt.user_id == user_id,
+                CommandReceipt.command == command,
+                CommandReceipt.key == key,
+            )
         )
         return StoredReceipt(row["fingerprint"], row["response"]) if row else None
 
@@ -49,11 +51,11 @@ class CommandRepository:
         self, user_id: UUID, command: str, key: str, fingerprint: str, result: BaseModel
     ) -> None:
         await self.conn.execute(
-            """INSERT INTO command_receipts(user_id,command,key,fingerprint,response)
-            VALUES($1,$2,$3,$4,$5::jsonb)""",
-            user_id,
-            command,
-            key,
-            fingerprint,
-            result.model_dump_json(),
+            insert(CommandReceipt).values(
+                user_id=user_id,
+                command=command,
+                key=key,
+                fingerprint=fingerprint,
+                response=result.model_dump(mode="json"),
+            )
         )

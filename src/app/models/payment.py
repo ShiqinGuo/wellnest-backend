@@ -15,7 +15,7 @@ class Subscription(Base):
     activated_at: Mapped[CreatedAt]
     source_payment_id: Mapped[UUID | None] = mapped_column(ForeignKey("payments.id"), unique=True)
 
-    __table_args__ = (CheckConstraint(plan_id == PlanId.demo, name="subscription_plan"),)
+    __table_args__ = (CheckConstraint(plan_id == PlanId.demo.value, name="subscription_plan"),)
 
 
 class MockPayment(CreatedAtMixin, Base):

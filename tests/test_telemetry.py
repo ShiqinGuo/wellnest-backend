@@ -9,11 +9,13 @@ from opentelemetry import trace
 from opentelemetry.instrumentation.httpx import AsyncOpenTelemetryTransport
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor, SpanExportResult
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+from sqlalchemy import select
 from test_payments import workflow as workflow
 from test_queue_delivery import Message
 
 from app.domain.payment_states import PaymentTask
 from app.domain.queue_message import DeliveryResult, PaymentMessage
+from app.models import Outbox
 from app.repositories.outbox import OutboxRepository
 from app.telemetry import CloudflareLogExporter, current_headers, span_record, tracer
 from app.worker_runtime import QueuePublisher, consume_batch
@@ -67,7 +69,9 @@ async def test_durable_outbox_keeps_origin_across_unrelated_relay(workflow, span
     with tracer().start_as_current_span("confirmation") as root:
         await outbox.enqueue(PaymentTask.create, aggregate)
         expected_parent = current_headers()
-    row = await workflow.db.fetchrow("SELECT * FROM outbox_events WHERE aggregate_id=$1", aggregate)
+    row = await workflow.db.fetchrow(
+        select(Outbox).select_from(Outbox).where(Outbox.aggregate_id == aggregate)
+    )
     assert json.loads(row["headers"]) == expected_parent
     sent = []
 

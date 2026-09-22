@@ -6,12 +6,15 @@ import pytest
 from payment_helpers import pay
 from pydantic import ValidationError
 from pydantic.alias_generators import to_snake
+from sqlalchemy import select, update
 from test_flows import PROFILE, SAMPLE, complete, key, start
 from test_refactor_and_jev import VALID
 
+from app.database import ScopedDatabase
 from app.domain.assessment import Answers, CompleteAnswers
 from app.domain.enums import FlowVersion
 from app.domain.plan import build_plan
+from app.models import Assessment, AssessmentResult
 from app.providers.typesafe import JevClient
 
 
@@ -135,18 +138,19 @@ async def test_lifestyle_snapshot_free_preview_and_member_fields(client, databas
     free = (await client.get(path)).json()
     assert len(free["planPreview"]["cards"]) == 4
     assert not {"calculation", "suggestedKcal", "projection", "predictedGoalDate"} & free.keys()
-    conn = await asyncpg.connect(database_url)
+    conn = ScopedDatabase(lambda: asyncpg.connect(database_url))
     try:
         row = await conn.fetchrow(
-            "SELECT input_snapshot,calculation FROM assessment_results WHERE assessment_id=$1",
-            UUID(a["id"]),
+            select(AssessmentResult.input_snapshot, AssessmentResult.calculation)
+            .select_from(AssessmentResult)
+            .where(AssessmentResult.assessment_id == UUID(a["id"]))
         )
         assert json.loads(row["input_snapshot"])["food_habits"] == ["sweet_drinks"]
         assert (
             json.loads(row["calculation"])["plan_preview"]["rules_version"] == "lifestyle-plan-v1"
         )
     finally:
-        await conn.close()
+        await conn.release()
     assert (await pay(client)).status_code == 201
     member = (await client.get(path)).json()
     assert member["planPreview"] == free["planPreview"]
@@ -169,13 +173,13 @@ async def test_jev_receives_real_habit_answers():
 @pytest.mark.parametrize("version", [FlowVersion.legacy, FlowVersion.guided])
 async def test_old_flow_submit_without_lifestyle(client, database_url, version):
     a = await start(client)
-    conn = await asyncpg.connect(database_url)
+    conn = ScopedDatabase(lambda: asyncpg.connect(database_url))
     try:
         await conn.execute(
-            "UPDATE assessments SET flow_version=$1 WHERE id=$2", version, UUID(a["id"])
+            update(Assessment).where(Assessment.id == UUID(a["id"])).values(flow_version=version)
         )
     finally:
-        await conn.close()
+        await conn.release()
     path = f"/api/assessments/{a['id']}"
     saved = await client.patch(
         path,
@@ -196,20 +200,23 @@ async def test_old_flow_submit_without_lifestyle(client, database_url, version):
 
 async def test_postgres_rejects_invalid_profile_values(client, database_url):
     a = await start(client)
-    conn = await asyncpg.connect(database_url)
+    conn = ScopedDatabase(lambda: asyncpg.connect(database_url))
     try:
         with pytest.raises(asyncpg.CheckViolationError):
             await conn.execute(
-                "UPDATE assessments SET sleep='impossible' WHERE id=$1", UUID(a["id"])
+                update(Assessment).where(Assessment.id == UUID(a["id"])).values(sleep="impossible")
             )
         with pytest.raises(asyncpg.CheckViolationError):
             await conn.execute(
-                "UPDATE assessments SET limitations=ARRAY['none','knees'] WHERE id=$1",
-                UUID(a["id"]),
+                update(Assessment)
+                .where(Assessment.id == UUID(a["id"]))
+                .values(limitations=["none", "knees"])
             )
         with pytest.raises(asyncpg.CheckViolationError):
             await conn.execute(
-                "UPDATE assessments SET time_window='evening' WHERE id=$1", UUID(a["id"])
+                update(Assessment)
+                .where(Assessment.id == UUID(a["id"]))
+                .values(time_window="evening")
             )
     finally:
-        await conn.close()
+        await conn.release()

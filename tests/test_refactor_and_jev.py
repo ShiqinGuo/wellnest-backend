@@ -7,11 +7,14 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from payment_helpers import pay
+from sqlalchemy import update
 from test_flows import SAMPLE, complete, key, start
 
+from app.database import ScopedDatabase
 from app.dependencies.services import get_jev
 from app.domain.assessment import CompleteAnswers
 from app.main import app
+from app.models import CommandReceipt
 from app.providers.typesafe import JevClient, JevTransportError
 
 VALID = {
@@ -152,18 +155,18 @@ async def test_legacy_receipt_replay(client, database_url):
     fingerprint = hashlib.sha256(
         json.dumps({"expected_version": 0, "answers": {"age": 35}}, sort_keys=True).encode()
     ).hexdigest()
-    conn = await asyncpg.connect(database_url)
+    conn = ScopedDatabase(lambda: asyncpg.connect(database_url))
     try:
         await conn.execute(
-            "UPDATE command_receipts SET response=$1::jsonb,fingerprint=$2 "
-            "WHERE command=$3 AND key=$4",
-            json.dumps(first),
-            fingerprint,
-            f"assessment.patch:{assessment['id']}",
-            headers["Idempotency-Key"],
+            update(CommandReceipt)
+            .where(
+                CommandReceipt.command == f"assessment.patch:{assessment['id']}",
+                CommandReceipt.key == headers["Idempotency-Key"],
+            )
+            .values(response=json.loads(json.dumps(first)), fingerprint=fingerprint)
         )
     finally:
-        await conn.close()
+        await conn.release()
     replay = await client.patch(path, json=payload, headers=headers)
     assert replay.status_code == 200 and replay.json() == first
     assert (await client.get(path)).json()["version"] == 1

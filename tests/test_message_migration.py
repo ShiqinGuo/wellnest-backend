@@ -1,43 +1,43 @@
-from urllib.parse import urlsplit, urlunsplit
 from uuid import uuid4
 
-import psycopg
 from alembic import command
 from alembic.config import Config
-from psycopg import sql
+from sqlalchemy import MetaData, Table, create_engine, func, insert, inspect, select
+from testcontainers.community.postgres import PostgresContainer
 
 from app.domain.payment_states import PaymentTask
 
 
-def test_message_headers_migration_preserves_existing_context(database_url):
-    name = "wellnest_migration_" + uuid4().hex
-    parts = urlsplit(database_url)
-    isolated_url = urlunsplit(parts._replace(path="/" + name))
-    with psycopg.connect(database_url, autocommit=True) as admin:
-        admin.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(name)))
+def test_message_headers_migration_preserves_existing_context():
+    with PostgresContainer("postgres:18", dbname="wellnest_test") as container:
+        url = container.get_connection_url().replace("postgresql+psycopg2", "postgresql")
+        config = Config("alembic.ini")
+        config.attributes["connection_url"] = url
+        command.upgrade(config, "f50922_trace_context")
+        engine = create_engine(url.replace("postgresql://", "postgresql+psycopg://", 1))
         try:
-            config = Config("alembic.ini")
-            config.attributes["connection_url"] = isolated_url
-            command.upgrade(config, "f50922_trace_context")
+            previous = Table("outbox_events", MetaData(), autoload_with=engine)
             parent = "00-" + "1" * 32 + "-" + "2" * 16 + "-01"
-            with psycopg.connect(isolated_url) as conn:
+            with engine.begin() as conn:
                 conn.execute(
-                    "INSERT INTO outbox_events"
-                    "(id,task,aggregate_id,status,available_at,traceparent) "
-                    "VALUES(%s,%s,%s,'pending',now(),%s)",
-                    (uuid4(), PaymentTask.create, uuid4(), parent),
+                    insert(previous).values(
+                        id=uuid4(),
+                        task=PaymentTask.create,
+                        aggregate_id=uuid4(),
+                        status="pending",
+                        available_at=func.now(),
+                        traceparent=parent,
+                    )
                 )
             command.upgrade(config, "head")
-            with psycopg.connect(isolated_url) as conn:
-                assert conn.execute("SELECT headers FROM outbox_events").fetchone()[0] == {
-                    "traceparent": parent
+            current = Table("outbox_events", MetaData(), autoload_with=engine)
+            with engine.connect() as conn:
+                assert conn.scalar(select(current.c.headers)) == {"traceparent": parent}
+                assert "traceparent" not in {
+                    c["name"] for c in inspect(conn).get_columns("outbox_events")
                 }
-                assert conn.execute(
-                    "SELECT count(*) FROM information_schema.columns "
-                    "WHERE table_name='outbox_events' AND column_name='traceparent'"
-                ).fetchone()[0] == 0
             command.downgrade(config, "f50922_trace_context")
-            with psycopg.connect(isolated_url) as conn:
-                assert conn.execute("SELECT traceparent FROM outbox_events").fetchone()[0] == parent
+            with engine.connect() as conn:
+                assert conn.scalar(select(previous.c.traceparent)) == parent
         finally:
-            admin.execute(sql.SQL("DROP DATABASE {}").format(sql.Identifier(name)))
+            engine.dispose()

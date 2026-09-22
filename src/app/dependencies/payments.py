@@ -3,11 +3,13 @@ from typing import Annotated
 
 from fastapi import Depends, Header
 
+from app.composition import build_payment_workflow
 from app.dependencies.database import DatabaseDep
 from app.errors import AppError, ErrorCode
 from app.payment_settings import PaymentSettings, payment_settings
 from app.providers.mock_payment import MockPaymentGateway
 from app.repositories.mock_provider import MockProviderRepository
+from app.repositories.outbox import OutboxRepository
 from app.services.mock_provider import MockProviderService
 from app.services.payment_workflow import PaymentWorkflow
 
@@ -22,11 +24,11 @@ async def provider_auth(settings: PaymentSettingsDep, authorization: str = Heade
 
 
 async def mock_provider(db: DatabaseDep, settings: PaymentSettingsDep) -> MockProviderService:
-    return MockProviderService(MockProviderRepository(db), settings)
+    return MockProviderService(MockProviderRepository(db), settings, OutboxRepository(db))
 
 
 async def workflow(db: DatabaseDep, settings: PaymentSettingsDep) -> PaymentWorkflow:
-    return PaymentWorkflow(db, settings, MockPaymentGateway(settings))
+    return build_payment_workflow(db, settings, MockPaymentGateway(settings))
 
 
 MockProviderDep = Annotated[MockProviderService, Depends(mock_provider)]
