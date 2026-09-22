@@ -6,6 +6,7 @@ import logging
 import sys
 import traceback
 from collections.abc import Mapping, Sequence
+from datetime import UTC, datetime
 
 from opentelemetry import trace
 from opentelemetry.instrumentation.asyncpg import AsyncPGInstrumentor
@@ -95,12 +96,16 @@ class TraceLogFormatter(logging.Formatter):
         context = trace.get_current_span().get_span_context()
         payload = {
             "event": "application.log",
+            "timestamp": datetime.fromtimestamp(record.created, UTC).isoformat(),
+            "service_name": SERVICE_NAME,
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
             "trace_id": format(context.trace_id, "032x") if context.is_valid else None,
             "span_id": format(context.span_id, "016x") if context.is_valid else None,
         }
+        if hasattr(record, "event_fields"):
+            payload.update(record.event_fields)
         if hasattr(record, "span_record"):
             payload.update(record.span_record)
         if record.exc_info and record.exc_info[0]:
@@ -110,7 +115,7 @@ class TraceLogFormatter(logging.Formatter):
                 {"file": frame.filename, "line": frame.lineno, "function": frame.name}
                 for frame in traceback.extract_tb(record.exc_info[2])
             ]
-        return json.dumps(payload, ensure_ascii=True)
+        return json.dumps(payload, ensure_ascii=True, default=str)
 
 
 def current_headers() -> dict[str, str]:

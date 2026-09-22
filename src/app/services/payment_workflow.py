@@ -12,6 +12,7 @@ from app.domain.payment_states import (
     PaymentTask,
 )
 from app.errors import AppError, ErrorCode
+from app.log_events import LogEvent, business_event
 from app.payment_settings import PaymentSettings
 from app.providers.mock_payment import PaymentGateway
 from app.repositories.outbox import OutboxRepository
@@ -54,6 +55,12 @@ class PaymentWorkflow:
                 raise LookupError("Inserted webhook is missing")
             if existing.fingerprint != fingerprint:
                 raise AppError(ErrorCode.payment_conflict)
+            business_event(
+                LogEvent.webhook_received,
+                payment_id=notification.merchant_payment_id,
+                notification_id=notification.event_id,
+                inbox_status=existing.status,
+            )
             if existing.status == InboxStatus.pending:
                 await self.outbox.enqueue(PaymentTask.process_webhook, notification.event_id)
 
@@ -123,6 +130,13 @@ class PaymentWorkflow:
                     outcome, rejection = InboxEvent.reject, exc.code.value
                 status = InboxStateMachine.transition(InboxStatus.pending, outcome)
                 await self.inbox.finish(notification_id, status, rejection)
+                business_event(
+                    LogEvent.webhook_processed,
+                    payment_id=inbox.payment_id,
+                    notification_id=notification_id,
+                    status=status,
+                    rejection_code=rejection,
+                )
             await self.outbox.done(event_id)
 
     async def schedule_reconciliation(self) -> bool:

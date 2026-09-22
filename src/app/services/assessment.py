@@ -20,6 +20,7 @@ from app.domain.flow import FLOW_STEPS, AssessmentNavigation
 from app.domain.plan import build_plan
 from app.domain.state_machine import AssessmentStateMachine
 from app.errors import AppError, ErrorCode
+from app.log_events import LogEvent, business_event
 from app.providers.typesafe import JevClient
 from app.repositories.assessment import AssessmentRepository
 from app.repositories.guidance import GuidanceRepository
@@ -163,6 +164,13 @@ class AssessmentService:
                 raise RuntimeError("Missing prepared assessment")
             status = AssessmentStateMachine.transition(current.status, AssessmentEvent.submit)
             await self.repository.complete(assessment_id, complete, calculation, status)
+            business_event(
+                LogEvent.assessment_completed,
+                assessment_id=assessment_id,
+                user_id=user_id,
+                status=status,
+                version=current.version + 1,
+            )
             return SubmissionData(result_id=assessment_id, version=current.version + 1)
 
         return await self.commands.run(

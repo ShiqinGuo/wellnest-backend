@@ -6,6 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel
 
 from app.errors import AppError, ErrorCode
+from app.log_events import LogEvent, business_event
 from app.repositories.command import CommandRepository
 
 
@@ -53,4 +54,5 @@ class CommandService:
                 return self.repository.decode(receipt, result_type)
             result = await operation()
             await self.repository.record(user_id, command, key, fingerprint, result)
+            business_event(LogEvent.command_committed, command=command, user_id=user_id)
             return result

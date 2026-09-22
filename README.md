@@ -169,6 +169,10 @@ FastAPI、HTTPX、asyncpg 的标准 OpenTelemetry Instrumentor 在 `app/telemetr
 
 Workers 使用不需要后台线程的 `SimpleSpanProcessor`，将 SDK span 输出为 JSON 日志。打开 `wellnest-backend → Observability → Events`，用响应头 `X-Trace-ID` 筛选字段 `trace_id`，再筛选 `event = otel.span`。记录包含 `span_id`、`parent_span_id`、`duration_ms`、开始/结束时间和状态。应用日志附带当前 trace/span ID。SQL 只导出操作名和指纹，不输出 SQL 正文、参数、URL、请求头或异常消息。
 
+每次 HTTP 请求输出一条 `event = request.completed`：包含路由模板、方法、状态码、耗时、request/trace/span ID、响应是否完成，以及业务错误码和校验问题；不采集请求/响应 body 或 headers。404 使用 `unmatched` 路由，CORS 和提前拒绝也纳入摘要。
+
+业务结果使用 `LogEvent` 统一命名：`assessment.completed`、`payment.created`、`payment.provider_confirmed`、`payment.webhook_received`、`payment.webhook_processed`、`payment.transitioned`、`subscription.activated`，以及通用 `command.committed`。事件在当前事务内暂存，提交成功后输出，回滚时丢弃；幂等重放不重复报告实际状态变化。这些是诊断日志，不是持久化审计账本，日志输出失败不改变业务结果。
+
 支付确认 trace 连接 confirm → Outbox → Queue → 内部 HTTP → webhook → Queue → 权益写入。浏览器轮询和结果读取是独立请求；Outbox 扫描 SQL 也有自身 span，事件执行通过持久化上下文接续。`messaging.delivery.age_ms` 包含重试等待，不等同于纯队列等待。
 
 Cloudflare 原生 Traces 仍显示平台调用；Python SDK span 存在 Logs 中，并未导入原生 Traces 瀑布图。演示使用全量应用采样及平台日志/trace 采样，查询仍受平台保留期、日志限制及导出失败影响。

@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 from app.domain.payment import ChannelCreate, ChannelNotification, ChannelPayment, CheckoutConfirm
 from app.domain.payment_states import PaymentEvent, PaymentStateMachine, PaymentStatus, PaymentTask
 from app.errors import AppError, ErrorCode
+from app.log_events import LogEvent, business_event
 from app.payment_settings import PaymentSettings
 from app.repositories.mock_provider import MockProviderRepository
 from app.repositories.outbox import OutboxRepository
@@ -73,9 +74,18 @@ class MockProviderService:
                     if command.outcome == PaymentStatus.succeeded
                     else PaymentEvent.fail
                 )
+                previous = row.status
                 target = PaymentStateMachine.transition(PaymentStatus(row.status), event)
                 row = await self.repository.update(row.id, target)
                 await self.outbox.enqueue(PaymentTask.deliver_webhook, row.id)
+                if target != previous:
+                    business_event(
+                        LogEvent.provider_confirmed,
+                        payment_id=row.merchant_payment_id,
+                        transaction_id=row.id,
+                        previous_status=previous,
+                        status=target,
+                    )
             return self.view(row)
 
     async def notification(self, transaction_id: UUID) -> ChannelNotification:

@@ -10,6 +10,7 @@ from app.domain.payment_states import (
 )
 from app.domain.state_machine import SubscriptionStateMachine
 from app.errors import AppError, ErrorCode
+from app.log_events import LogEvent, business_event
 from app.payment_settings import PaymentSettings
 from app.repositories.assessment import AssessmentRepository
 from app.repositories.command import CommandRepository
@@ -51,6 +52,9 @@ class PaymentService:
                     self.settings.reconcile_interval,
                 )
                 await self.outbox.enqueue(PaymentTask.create, row.id)
+                business_event(
+                    LogEvent.payment_created, payment_id=row.id, user_id=user_id, status=row.status
+                )
             return self.repository.data(row)
 
         return await self.commands.run(
@@ -105,6 +109,13 @@ class PaymentService:
             }[result.status]
             target = PaymentStateMachine.transition(current, event)
         await self.repository.apply_channel(payment_id, result, target)
+        if target != current:
+            business_event(
+                LogEvent.payment_transitioned,
+                payment_id=payment_id,
+                previous_status=current,
+                status=target,
+            )
         if target == PaymentStatus.succeeded:
             state = (
                 SubscriptionStatus.active
@@ -113,3 +124,11 @@ class PaymentService:
             )
             SubscriptionStateMachine.transition(state, SubscriptionEvent.activate)
             await self.repository.activate(row.user_id, row.plan_id, payment_id)
+            if state != SubscriptionStatus.active:
+                business_event(
+                    LogEvent.subscription_activated,
+                    payment_id=payment_id,
+                    user_id=row.user_id,
+                    previous_status=state,
+                    status=SubscriptionStatus.active,
+                )

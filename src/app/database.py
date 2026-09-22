@@ -8,6 +8,8 @@ from sqlalchemy.sql import Select
 from sqlalchemy.sql.compiler import SQLCompiler
 from sqlalchemy.sql.dml import Delete, Insert, Update
 
+from app.log_events import committed_events
+
 type Statement = Select | Insert | Update | Delete
 
 
@@ -54,8 +56,9 @@ class ScopedDatabase:
         async with self.acquired() as conn:
             self.active = conn
             try:
-                async with conn.transaction():
-                    yield
+                with committed_events():
+                    async with conn.transaction():
+                        yield
             finally:
                 self.active = None
 
